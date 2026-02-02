@@ -1,0 +1,376 @@
+{
+    "info": {
+        "name": "HCM Settings API",
+        "description": "API collection for HCM Settings management including company logo upload",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{auth_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost/HCM/api",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    if (response.access_token) {",
+                                    "        pm.collectionVariables.set('auth_token', response.access_token);",
+                                    "        console.log('Token saved:', response.access_token);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "login"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Settings Management",
+            "item": [
+                {
+                    "name": "Get All Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Settings by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?category=company",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "company"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Public Settings Only",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?public=true",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "public",
+                                    "value": "true"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Company Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?category=company",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "company"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get System Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?category=system",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "system"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Payroll Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?category=payroll",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "payroll"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Leave Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?category=leave",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "leave"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Update Settings",
+            "item": [
+                {
+                    "name": "Update Company Settings",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"settings\": {\n        \"company_name\": {\n            \"value\": \"Updated TechCorp Solutions\",\n            \"category\": \"company\"\n        },\n        \"company_email\": {\n            \"value\": \"contact@techcorp.com\",\n            \"category\": \"company\"\n        },\n        \"company_phone\": {\n            \"value\": \"+1 (555) 987-6543\",\n            \"category\": \"company\"\n        }\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update System Settings",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"settings\": {\n        \"maintenance_mode\": {\n            \"value\": false,\n            \"category\": \"system\"\n        },\n        \"email_notifications\": {\n            \"value\": true,\n            \"category\": \"system\"\n        },\n        \"session_timeout\": {\n            \"value\": 60,\n            \"category\": \"system\"\n        },\n        \"max_login_attempts\": {\n            \"value\": 3,\n            \"category\": \"system\"\n        }\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Payroll Settings",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"settings\": {\n        \"pay_frequency\": {\n            \"value\": \"bi-weekly\",\n            \"category\": \"payroll\"\n        },\n        \"overtime_rate\": {\n            \"value\": 1.75,\n            \"category\": \"payroll\"\n        },\n        \"tax_rate\": {\n            \"value\": 15.0,\n            \"category\": \"payroll\"\n        }\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Leave Settings",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"settings\": {\n        \"annual_leave_days\": {\n            \"value\": 25,\n            \"category\": \"leave\"\n        },\n        \"sick_leave_days\": {\n            \"value\": 15,\n            \"category\": \"leave\"\n        },\n        \"auto_approve_threshold\": {\n            \"value\": 2,\n            \"category\": \"leave\"\n        }\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create New Setting",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"settings\": {\n        \"custom_setting_key\": {\n            \"value\": \"custom_value\",\n            \"category\": \"system\"\n        }\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Company Logo Management",
+            "item": [
+                {
+                    "name": "Upload Company Logo",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "logo",
+                                    "type": "file",
+                                    "src": "",
+                                    "description": "Company logo file (JPG, PNG, GIF - max 2MB)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings.php",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Admin Operations",
+            "item": [
+                {
+                    "name": "Delete Setting (Admin Only)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/settings.php?key=custom_setting_key",
+                            "host": ["{{base_url}}"],
+                            "path": ["settings.php"],
+                            "query": [
+                                {
+                                    "key": "key",
+                                    "value": "custom_setting_key",
+                                    "description": "Setting key to delete"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
