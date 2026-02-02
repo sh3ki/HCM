@@ -1,0 +1,1856 @@
+{
+  "info": {
+    "name": "HCM System API",
+    "description": "Human Capital Management System REST API Collection",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/HCM/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\",\n  \"remember_me\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with username/email and password. Returns access token and refresh token."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.access_token) {",
+                  "        pm.environment.set('access_token', responseJson.data.access_token);",
+                  "    }",
+                  "    if (responseJson.data && responseJson.data.refresh_token) {",
+                  "        pm.environment.set('refresh_token', responseJson.data.refresh_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Get current user profile information."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/validate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "validate"
+              ]
+            },
+            "description": "Validate if the current access token is valid."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refresh access token using refresh token."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.access_token) {",
+                  "        pm.environment.set('access_token', responseJson.data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"admin123\",\n  \"new_password\": \"newpassword123\",\n  \"confirm_password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Change user password."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout user and invalidate session."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees?page=1&limit=10&department_id=&status=active&search=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of records per page"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Filter by department ID"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by employment status"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by name, email, or employee number"
+                }
+              ]
+            },
+            "description": "Get list of all employees with optional filters and pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "1"
+              ]
+            },
+            "description": "Get detailed information about a specific employee."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Employee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_number\": \"EMP014\",\n  \"first_name\": \"John\",\n  \"middle_name\": \"A\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john.doe@hcm.local\",\n  \"phone\": \"09171234567\",\n  \"address\": \"123 Main St, City\",\n  \"date_of_birth\": \"1990-01-15\",\n  \"gender\": \"male\",\n  \"marital_status\": \"single\",\n  \"emergency_contact_name\": \"Jane Doe\",\n  \"emergency_contact_phone\": \"09187654321\",\n  \"department_id\": 2,\n  \"position_id\": 6,\n  \"manager_id\": 4,\n  \"hire_date\": \"2023-09-15\",\n  \"employment_status\": \"active\",\n  \"employment_type\": \"full_time\",\n  \"username\": \"john.doe\",\n  \"role\": \"employee\",\n  \"base_salary\": 35000.00,\n  \"salary_type\": \"monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            },
+            "description": "Create a new employee record."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\",\n  \"email\": \"jane.smith@hcm.local\",\n  \"phone\": \"09191234567\",\n  \"department_id\": 3,\n  \"position_id\": 9,\n  \"employment_status\": \"active\",\n  \"base_salary\": 50000.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/employees/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "1"
+              ]
+            },
+            "description": "Update an existing employee record."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/employees/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "employees",
+                "1"
+              ]
+            },
+            "description": "Delete an employee (soft delete - changes status to terminated)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Leave Management",
+      "item": [
+        {
+          "name": "Get All Leave Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves?page=1&limit=25&employee_id=&status=&leave_type=&year=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Number of records per page"
+                },
+                {
+                  "key": "employee_id",
+                  "value": "",
+                  "description": "Filter by employee ID"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status (Pending, Approved, Rejected, Cancelled)"
+                },
+                {
+                  "key": "leave_type",
+                  "value": "",
+                  "description": "Filter by leave type ID"
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "description": "Filter by year"
+                }
+              ]
+            },
+            "description": "Get list of all leave requests with optional filters and pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leave Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves?id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Leave request ID"
+                }
+              ]
+            },
+            "description": "Get specific leave request details by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leave Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves?action=types",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "types",
+                  "description": "Action to get leave types"
+                }
+              ]
+            },
+            "description": "Get all available leave types with their configurations."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leave Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves?action=balance&employee_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "balance",
+                  "description": "Action to get leave balance"
+                },
+                {
+                  "key": "employee_id",
+                  "value": "",
+                  "description": "Employee ID (optional, defaults to current user)"
+                }
+              ]
+            },
+            "description": "Get leave balance for an employee showing remaining days for each leave type."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": 1,\n  \"leave_type_id\": 1,\n  \"start_date\": \"2024-03-15\",\n  \"end_date\": \"2024-03-17\",\n  \"reason\": \"Family vacation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/leaves",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ]
+            },
+            "description": "Create a new leave request."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Leave Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2024-03-16\",\n  \"end_date\": \"2024-03-18\",\n  \"reason\": \"Updated vacation dates\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/leaves?id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Leave request ID to update"
+                }
+              ]
+            },
+            "description": "Update an existing leave request (only pending requests can be updated)."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Leave Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Approved for team vacation period\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/leaves?id=1&action=approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Leave request ID to approve"
+                },
+                {
+                  "key": "action",
+                  "value": "approve",
+                  "description": "Action to approve the leave request"
+                }
+              ]
+            },
+            "description": "Approve a pending leave request."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Leave Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Insufficient leave balance or conflict with business requirements\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/leaves?id=1&action=reject",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Leave request ID to reject"
+                },
+                {
+                  "key": "action",
+                  "value": "reject",
+                  "description": "Action to reject the leave request"
+                }
+              ]
+            },
+            "description": "Reject a pending leave request with optional notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Leave Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/leaves?id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "leaves"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Leave request ID to cancel"
+                }
+              ]
+            },
+            "description": "Cancel a leave request (marks as cancelled, only pending requests can be cancelled)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Get Dashboard Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=dashboard_metrics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "dashboard_metrics",
+                  "description": "Get dashboard summary metrics"
+                }
+              ]
+            },
+            "description": "Get dashboard metrics including total employees, departments, attendance rate, and payroll."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Employee Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=employee&from_date=2023-01-01&to_date=2023-12-31&department_id=&format=json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "employee",
+                  "description": "Report type"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2023-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2023-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                },
+                {
+                  "key": "format",
+                  "value": "json",
+                  "description": "Output format (json, pdf, excel, csv)"
+                }
+              ]
+            },
+            "description": "Generate comprehensive employee report with filtering options."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=attendance&from_date=2023-01-01&to_date=2023-12-31&department_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "attendance",
+                  "description": "Report type"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2023-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2023-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                }
+              ]
+            },
+            "description": "Generate attendance report with trends and department breakdown."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payroll Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=payroll&department_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "payroll",
+                  "description": "Report type"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                }
+              ]
+            },
+            "description": "Generate payroll report with salary breakdown and department statistics."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leave Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=leave&from_date=2023-01-01&to_date=2023-12-31&department_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "leave",
+                  "description": "Report type"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2023-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2023-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                }
+              ]
+            },
+            "description": "Generate leave report with statistics and status breakdown."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Department Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=department",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "department",
+                  "description": "Report type"
+                }
+              ]
+            },
+            "description": "Generate department performance report with employee counts and statistics."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Performance Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=performance&from_date=2023-01-01&to_date=2023-12-31&department_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "performance",
+                  "description": "Report type"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2023-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2023-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                }
+              ]
+            },
+            "description": "Generate performance evaluation report with ratings and distribution."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Benefits Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=benefits&from_date=2023-01-01&to_date=2023-12-31&department_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "benefits",
+                  "description": "Report type"
+                },
+                {
+                  "key": "from_date",
+                  "value": "2023-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2023-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "",
+                  "description": "Department filter (optional)"
+                }
+              ]
+            },
+            "description": "Generate comprehensive benefits report with insurance plans, utilization rates, and cost analysis."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Charts Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports.php?type=charts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "charts",
+                  "description": "Get data for dashboard charts"
+                }
+              ]
+            },
+            "description": "Get formatted data for dashboard charts (attendance trends, leave stats, payroll breakdown, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Custom Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"generate_custom_report\",\n  \"report_type\": \"employee\",\n  \"from_date\": \"2023-01-01\",\n  \"to_date\": \"2023-12-31\",\n  \"department_id\": \"\",\n  \"format\": \"pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reports.php",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ]
+            },
+            "description": "Generate a custom report with specific parameters and format."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"export_report\",\n  \"report_data\": {\n    \"report_type\": \"employee\",\n    \"generated_at\": \"2023-09-15 10:30:00\",\n    \"total_records\": 248,\n    \"employees\": []\n  },\n  \"format\": \"excel\",\n  \"filename\": \"employee_report_2023\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reports.php",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports.php"
+              ]
+            },
+            "description": "Export report data to specified format (PDF, Excel, CSV)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dependents",
+      "item": [
+        {
+          "name": "Get All Dependents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dependents.php?relationship=&is_beneficiary=&is_hmo_covered=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ],
+              "query": [
+                {
+                  "key": "relationship",
+                  "value": "",
+                  "description": "Filter by relationship type (Spouse, Child, Parent, Sibling, Other)"
+                },
+                {
+                  "key": "is_beneficiary",
+                  "value": "",
+                  "description": "Filter by beneficiary status (1 for beneficiaries, 0 for non-beneficiaries)"
+                },
+                {
+                  "key": "is_hmo_covered",
+                  "value": "",
+                  "description": "Filter by HMO coverage (1 for covered, 0 for not covered)"
+                }
+              ]
+            },
+            "description": "Get list of all employee dependents with optional filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dependents by Employee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dependents.php?employee_id=1&relationship=&is_beneficiary=&is_hmo_covered=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ],
+              "query": [
+                {
+                  "key": "employee_id",
+                  "value": "1",
+                  "description": "Employee ID to get dependents for"
+                },
+                {
+                  "key": "relationship",
+                  "value": "",
+                  "description": "Filter by relationship type (optional)"
+                },
+                {
+                  "key": "is_beneficiary",
+                  "value": "",
+                  "description": "Filter by beneficiary status (optional)"
+                },
+                {
+                  "key": "is_hmo_covered",
+                  "value": "",
+                  "description": "Filter by HMO coverage (optional)"
+                }
+              ]
+            },
+            "description": "Get dependents for a specific employee with optional filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dependent by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dependents.php?dependent_id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ],
+              "query": [
+                {
+                  "key": "dependent_id",
+                  "value": "1",
+                  "description": "Specific dependent ID to retrieve"
+                }
+              ]
+            },
+            "description": "Get detailed information about a specific dependent."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Dependent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": 1,\n  \"dependent_name\": \"John Doe Jr.\",\n  \"relationship\": \"Child\",\n  \"date_of_birth\": \"2010-05-15\",\n  \"gender\": \"M\",\n  \"is_beneficiary\": 1,\n  \"beneficiary_percentage\": 25.00,\n  \"is_hmo_covered\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/dependents.php",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ]
+            },
+            "description": "Create a new dependent record for an employee."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Dependent",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dependent_id\": 1,\n  \"dependent_name\": \"Jane Doe Jr.\",\n  \"relationship\": \"Child\",\n  \"date_of_birth\": \"2010-05-15\",\n  \"gender\": \"F\",\n  \"is_beneficiary\": 1,\n  \"beneficiary_percentage\": 30.00,\n  \"is_hmo_covered\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/dependents.php",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ]
+            },
+            "description": "Update an existing dependent record."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Dependent",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dependents.php?dependent_id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dependents.php"
+              ],
+              "query": [
+                {
+                  "key": "dependent_id",
+                  "value": "1",
+                  "description": "Dependent ID to delete"
+                }
+              ]
+            },
+            "description": "Delete a dependent record (permanent deletion)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Get Attendance Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "status",
+                  "description": "Get current user's attendance status"
+                }
+              ]
+            },
+            "description": "Get current user's attendance status including clock in/out capabilities and break status."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Today's Attendance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=today",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "today",
+                  "description": "Get today's attendance record for current user"
+                }
+              ]
+            },
+            "description": "Get today's attendance record for the current user including time in, time out, and total hours."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=history&page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "history",
+                  "description": "Get attendance history for current user"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of records per page"
+                }
+              ]
+            },
+            "description": "Get attendance history for the current user for the past 30 days with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Attendance Records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?page=1&limit=25&date_from=2024-01-01&date_to=2024-12-31&employee_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Number of records per page"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2024-01-01",
+                  "description": "Start date filter (optional)"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2024-12-31",
+                  "description": "End date filter (optional)"
+                },
+                {
+                  "key": "employee_id",
+                  "value": "",
+                  "description": "Filter by specific employee ID (optional, admin only)"
+                }
+              ]
+            },
+            "description": "Get all attendance records with optional date range and employee filters. Admin users can view all records."
+          },
+          "response": []
+        },
+        {
+          "name": "Clock In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=clock-in",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "clock-in",
+                  "description": "Clock in action"
+                }
+              ]
+            },
+            "description": "Clock in for the current user. Creates attendance record for today with current time."
+          },
+          "response": []
+        },
+        {
+          "name": "Clock Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=clock-out",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "clock-out",
+                  "description": "Clock out action"
+                }
+              ]
+            },
+            "description": "Clock out for the current user. Updates attendance record with time out and calculates total hours."
+          },
+          "response": []
+        },
+        {
+          "name": "Start Break",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=break-start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "break-start",
+                  "description": "Start break action"
+                }
+              ]
+            },
+            "description": "Start break for the current user. Records break start time."
+          },
+          "response": []
+        },
+        {
+          "name": "End Break",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=break-end",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "break-end",
+                  "description": "End break action"
+                }
+              ]
+            },
+            "description": "End break for the current user. Records break end time."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=details&id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "details",
+                  "description": "Get detailed attendance record"
+                },
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Attendance record ID"
+                }
+              ]
+            },
+            "description": "Get detailed information about a specific attendance record including employee info and notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "summary",
+                  "description": "Get attendance summary statistics"
+                }
+              ]
+            },
+            "description": "Get comprehensive attendance summary with counts for present, absent, late arrivals, etc."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Note to Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attendance_id\": 1,\n  \"note_type\": \"general\",\n  \"note_content\": \"Employee arrived late due to traffic.\",\n  \"priority\": \"low\",\n  \"visibility\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?action=add-note",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "add-note",
+                  "description": "Add note action"
+                }
+              ]
+            },
+            "description": "Add a note to an attendance record with type, priority, and visibility options."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Attendance Record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_in\": \"08:00:00\",\n  \"time_out\": \"17:00:00\",\n  \"break_start\": \"12:00:00\",\n  \"break_end\": \"13:00:00\",\n  \"status\": \"Present\",\n  \"notes\": \"Updated by admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attendance.php?id=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attendance.php"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Attendance record ID to update"
+                }
+              ]
+            },
+            "description": "Update an existing attendance record. Admin only feature for correcting attendance data."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Info",
+      "item": [
+        {
+          "name": "Get API Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Get API information and available endpoints."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
