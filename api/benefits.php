@@ -151,7 +151,7 @@ function getBenefitPlans($pdo) {
                 LEFT JOIN employee_insurance ei ON ip.id = ei.insurance_plan_id AND ei.status = 'Active'
                 WHERE ip.is_active = 1
                 GROUP BY ip.id
-                ORDER BY ip.plan_name";
+                ORDER BY ip.created_at DESC, ip.plan_name";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
@@ -621,12 +621,10 @@ function getBenefitsStatsData($pdo) {
     $stmt->execute();
     $stats['pending_enrollments'] = $stmt->fetchColumn();
 
-    // Total monthly premium
-    $stmt = $pdo->prepare("SELECT SUM(ip.monthly_premium) FROM insurance_plans ip
-                          JOIN employee_insurance ei ON ip.id = ei.insurance_plan_id
-                          WHERE ei.status = 'Active' AND ip.is_active = 1");
+    // Active providers count
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM insurance_providers WHERE is_active = 1");
     $stmt->execute();
-    $stats['total_monthly_premium'] = $stmt->fetchColumn() ?: 0;
+    $stats['active_providers'] = $stmt->fetchColumn();
 
     return $stats;
 }
