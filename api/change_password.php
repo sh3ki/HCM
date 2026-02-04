@@ -92,11 +92,13 @@ function handleChangePassword($pdo) {
         // Hash the new password
         $passwordHash = password_hash($data['new_password'], PASSWORD_DEFAULT);
         
-        // Update the password and clear the requires_password_change flag
+        // Update the password, clear requires_password_change flag, and set auto_password_changed to 0
+        // auto_password_changed = 0 means user has changed from auto-generated password (permanent)
         $stmt = $pdo->prepare("
             UPDATE users 
             SET password_hash = ?, 
                 requires_password_change = 0,
+                auto_password_changed = 0,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ");
@@ -104,6 +106,7 @@ function handleChangePassword($pdo) {
         
         // Update session
         unset($_SESSION['requires_password_change']);
+        unset($_SESSION['auto_password_changed']);
         
         echo json_encode([
             'success' => true,
@@ -125,13 +128,14 @@ function handleSkipPasswordChange($pdo) {
     $userId = $_SESSION['user_id'];
     
     try {
-        // Just clear the requires_password_change flag from session
-        // Keep it in database so they can change later
+        // Just clear the auto_password_changed flag from session temporarily
+        // It will prompt again on next login if password hasn't been changed
+        unset($_SESSION['auto_password_changed']);
         unset($_SESSION['requires_password_change']);
         
         echo json_encode([
             'success' => true,
-            'message' => 'Password change skipped'
+            'message' => 'Password change skipped. You will be prompted again on next login.'
         ]);
         
     } catch (Exception $e) {
