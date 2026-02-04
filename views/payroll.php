@@ -115,7 +115,7 @@ if ($_POST) {
             <div class="mb-6 flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Payroll Management</h1>
-                    <p class="text-gray-600">Process and manage employee payroll</p>
+                    <p class="text-gray-600" id="page-subtitle">Process and manage employee payroll</p>
                 </div>
                 <div class="flex gap-2">
                     <button onclick="refreshAllData()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center">
@@ -561,6 +561,10 @@ if ($_POST) {
                 return this.request('periods');
             }
 
+            async getCurrentMonthPeriod() {
+                return this.request('current-period');
+            }
+
             async getAllPayrollData() {
                 return this.request('');
             }
@@ -727,7 +731,7 @@ if ($_POST) {
                     allPeriods = result.data;
                     updatePeriodSelector();
 
-                    // Set current period to the most recent one
+                    // Set current period to the most recent one if not already set
                     if (allPeriods.length > 0 && !currentPeriod) {
                         currentPeriod = allPeriods[0];
                         updateCurrentPeriodDisplay();
@@ -738,6 +742,24 @@ if ($_POST) {
             } catch (error) {
                 console.error('Failed to load payroll periods:', error);
                 showNotification('Failed to load payroll periods: ' + error.message, 'error');
+            }
+        }
+
+        async function loadCurrentMonthPeriod() {
+            try {
+                const result = await payrollAPI.getCurrentMonthPeriod();
+
+                if (result.success && result.data) {
+                    currentPeriod = result.data;
+                    console.log('Loaded current month period:', currentPeriod);
+                    return true;
+                } else {
+                    console.log('No current month period found, will use most recent');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Failed to load current month period:', error);
+                return false;
             }
         }
 
@@ -768,6 +790,15 @@ if ($_POST) {
 
         function updateCurrentPeriodDisplay() {
             if (!currentPeriod) return;
+
+            // Update page subtitle with current period info
+            const pageSubtitle = document.getElementById('page-subtitle');
+            if (pageSubtitle && currentPeriod.name) {
+                const startDate = new Date(currentPeriod.start_date);
+                const endDate = new Date(currentPeriod.end_date);
+                const monthYear = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                pageSubtitle.textContent = `Showing payroll for: ${currentPeriod.name} (${monthYear})`;
+            }
 
             // Update status badge
             const statusElement = document.getElementById('period-status');
@@ -1610,10 +1641,22 @@ if ($_POST) {
 
         async function initializePayrollPage() {
             try {
-                // Load periods first
+                // First, try to load the current month's period
+                const hasCurrentPeriod = await loadCurrentMonthPeriod();
+                
+                // Then load all periods for the dropdown
                 await loadPayrollPeriods();
 
-                // Then load data for the current period
+                // If we successfully loaded current month period, display it
+                if (hasCurrentPeriod && currentPeriod) {
+                    updateCurrentPeriodDisplay();
+                    
+                    // Show notification about loaded period
+                    const periodName = currentPeriod.name || 'Current Period';
+                    showNotification(`Showing payroll for: ${periodName}`, 'info');
+                }
+
+                // Load data for the current period
                 await Promise.all([
                     refreshPayrollSummary(),
                     loadPayrollRecords(currentPeriod?.id)
