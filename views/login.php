@@ -70,6 +70,7 @@ if ($_POST) {
             $_SESSION['role_id'] = $responseData['data']['user']['role_id'] ?? 1; // Store role_id
             $_SESSION['employee_id'] = $responseData['data']['user']['employee_id'] ?? null;
             $_SESSION['is_new'] = $responseData['data']['user']['is_new'] ?? 0;
+            $_SESSION['auto_password_changed'] = $responseData['data']['user']['auto_password_changed'] ?? 0;
             $_SESSION['requires_password_change'] = $responseData['data']['user']['requires_password_change'] ?? 0;
             $_SESSION['username'] = $responseData['data']['user']['username'] ?? null;
             $_SESSION['email'] = $responseData['data']['user']['email'] ?? null;
