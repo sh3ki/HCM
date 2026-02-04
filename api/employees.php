@@ -31,7 +31,12 @@ $method = $_SERVER['REQUEST_METHOD'];
 try {
     switch ($method) {
         case 'GET':
-            if (isset($_GET['id'])) {
+            // Handle special endpoints
+            if (isset($_GET['departments'])) {
+                getDepartments($pdo);
+            } elseif (isset($_GET['positions'])) {
+                getPositions($pdo);
+            } elseif (isset($_GET['id'])) {
                 handleGetEmployee($pdo, $_GET['id']);
             } else {
                 handleGetEmployees($pdo);
@@ -324,6 +329,46 @@ function handleDeleteEmployee($pdo, $employeeId) {
             'success' => false,
             'error' => 'Database error occurred',
             'code' => 'DATABASE_ERROR'
+        ]);
+    }
+}
+
+function getDepartments($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT DISTINCT dept_name FROM departments WHERE dept_name IS NOT NULL AND is_active = 1 ORDER BY dept_name");
+        $departments = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'departments' => $departments
+            ]
+        ]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error occurred'
+        ]);
+    }
+}
+
+function getPositions($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT DISTINCT position_title FROM positions WHERE position_title IS NOT NULL AND is_active = 1 ORDER BY position_title");
+        $positions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'positions' => $positions
+            ]
+        ]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error occurred'
         ]);
     }
 }
