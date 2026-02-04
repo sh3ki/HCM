@@ -312,8 +312,8 @@ function handleCreateEmployee($pdo) {
         $nextNum = ($result['max_num'] ?? 0) + 1;
         $employeeNumber = 'EMP-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
         
-        // Create username from email (part before @)
-        $username = explode('@', $data['email'])[0];
+        // Use provided username or create from email (part before @)
+        $username = !empty($data['username']) ? $data['username'] : explode('@', $data['email'])[0];
         $baseUsername = $username;
         $counter = 1;
         
@@ -330,10 +330,12 @@ function handleCreateEmployee($pdo) {
         $pdo->beginTransaction();
         
         try {
-            // 1. Insert into users table
+            // 1. Insert into users table (role_id 5 = Employee)
+            // auto_password_changed = 1 (using auto-generated password)
+            // is_new = 1 (requires OTP verification)
             $stmt = $pdo->prepare("
-                INSERT INTO users (username, email, password_hash, role, is_active, requires_password_change, is_new)
-                VALUES (?, ?, ?, 'employee', 1, 1, 1)
+                INSERT INTO users (username, email, password_hash, role_id, is_active, auto_password_changed, is_new, last_login)
+                VALUES (?, ?, ?, 5, 1, 1, 1, NULL)
             ");
             $stmt->execute([$username, $data['email'], $passwordHash]);
             $userId = $pdo->lastInsertId();
@@ -344,7 +346,7 @@ function handleCreateEmployee($pdo) {
                     user_id, employee_id, first_name, middle_name, last_name, 
                     email, phone, address, date_of_birth, gender, 
                     marital_status, emergency_contact_name, emergency_contact_phone,
-                    department, position, hire_date, employment_status, employment_type
+                    department_id, position_id, hire_date, employment_status, employee_type
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
@@ -362,11 +364,11 @@ function handleCreateEmployee($pdo) {
                 $data['marital_status'] ?? null,
                 $data['emergency_contact_name'] ?? null,
                 $data['emergency_contact_phone'] ?? null,
-                $data['department'] ?? null,
-                $data['position'] ?? null,
+                $data['department_id'] ?? null,
+                $data['position_id'] ?? null,
                 $data['hire_date'],
                 $data['employment_status'],
-                $data['employment_type'] ?? 'Full-time'
+                $data['employee_type'] ?? 'Regular'
             ]);
             
             $employeeId = $pdo->lastInsertId();
@@ -415,8 +417,10 @@ function handleCreateEmployee($pdo) {
 }
 
 function sendCredentialsEmail($email, $firstName, $username, $password) {
+    require_once __DIR__ . '/../includes/otp_mailer.php';
+    
     $subject = "Welcome to HCM System - Your Login Credentials";
-    $message = "
+    $htmlBody = "
     <html>
     <head>
         <style>
@@ -443,9 +447,10 @@ function sendCredentialsEmail($email, $firstName, $username, $password) {
                 </div>
                 <p><strong>Important:</strong></p>
                 <ul>
-                    <li>You will be prompted to change your password on first login</li>
-                    <li>You will need to verify your email with an OTP code</li>
-                    <li>Please keep your credentials secure</li>
+                    <li>Please use the username and password above to log in</li>
+                    <li>You will need to verify your email with an OTP code upon first login</li>
+                    <li>Please keep your credentials secure and do not share them</li>
+                    <li>Change your password after logging in for the first time</li>
                 </ul>
             </div>
             <div class='footer'>
@@ -456,22 +461,22 @@ function sendCredentialsEmail($email, $firstName, $username, $password) {
     </html>
     ";
     
-    $headers = "MIME-Version: 1.0" . "\r\n";
-    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-    $headers .= "From: HCM System <noreply@hcmsystem.com>" . "\r\n";
-    
-    // For development, just log the credentials
+    // Log credentials for debugging
     error_log("=== NEW EMPLOYEE CREDENTIALS ===");
     error_log("Email: $email");
     error_log("Username: $username");
     error_log("Password: $password");
     error_log("================================");
     
-    // Attempt to send email (will fail in local dev without mail server)
-    $sent = @mail($email, $subject, $message, $headers);
-    
-    // Return true since we logged it (for development purposes)
-    return true;
+    try {
+        // Use the SMTP mailer function
+        smtp_send_mail($email, $firstName, $subject, $htmlBody);
+        error_log("✓ Credentials email sent successfully to: $email");
+        return true;
+    } catch (Exception $e) {
+        error_log("✗ Failed to send credentials email: " . $e->getMessage());
+        return false;
+    }
 }
 
 function handleUpdateEmployee($pdo, $employeeId) {
