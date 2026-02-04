@@ -106,6 +106,17 @@ $isEmployee = ($userRole === 'employee');
                         <span class="ml-3">Manage Dependents</span>
                     </a>
                 </li>
+
+                <?php 
+                // Check if user is admin to show Admin Management link
+                if ($currentUser && isset($currentUser['role']) && strtolower($currentUser['role']) === 'admin'): ?>
+                <li>
+                    <a href="admin.php" class="flex items-center p-2 rounded-lg group <?php echo ($currentPage == 'admin') ? 'text-white bg-primary' : 'text-gray-900 hover:bg-gray-100'; ?>">
+                        <i class="fas fa-user-shield w-5 h-5 <?php echo ($currentPage == 'admin') ? 'text-white' : 'text-gray-500 group-hover:text-gray-900'; ?>"></i>
+                        <span class="ml-3">Admin Management</span>
+                    </a>
+                </li>
+                <?php endif; ?>
             <?php endif; ?>
 
             <!-- Settings -->
