@@ -217,7 +217,7 @@ if ($_POST) {
                     </div>
 
                     <div class="text-sm">
-                        <a href="#" class="font-medium text-primary hover:text-blue-500">
+                        <a href="forgot_password.php" class="font-medium text-primary hover:text-blue-500">
                             Forgot your password?
                         </a>
                     </div>
