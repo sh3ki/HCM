@@ -27,6 +27,75 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
 
+// OTP modal logic for new users
+(function initOtpModal() {
+    const otpModal = document.getElementById('otp-modal');
+    if (!otpModal) return;
+
+    const otpInput = document.getElementById('otp-input');
+    const confirmBtn = document.getElementById('otp-confirm');
+    const resendBtn = document.getElementById('otp-resend');
+    const otpMessage = document.getElementById('otp-message');
+
+    document.body.classList.add('overflow-hidden');
+
+    async function sendOtp() {
+        otpMessage.textContent = '';
+        resendBtn.disabled = true;
+        resendBtn.classList.add('opacity-60');
+
+        try {
+            const response = await fetch('../api/otp.php?action=send', { method: 'POST' });
+            const data = await response.json();
+            if (!data.success) {
+                otpMessage.textContent = data.error || 'Failed to send OTP';
+            }
+        } catch (error) {
+            otpMessage.textContent = 'Failed to send OTP. Please try again.';
+        } finally {
+            setTimeout(() => {
+                resendBtn.disabled = false;
+                resendBtn.classList.remove('opacity-60');
+            }, 60000);
+        }
+    }
+
+    async function verifyOtp() {
+        otpMessage.textContent = '';
+        const otp = (otpInput.value || '').trim();
+        if (!otp) {
+            otpMessage.textContent = 'Please enter the OTP.';
+            return;
+        }
+
+        try {
+            const response = await fetch('../api/otp.php?action=verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp })
+            });
+            const data = await response.json();
+            if (data.success) {
+                location.reload();
+                return;
+            }
+            otpMessage.textContent = data.error || 'Invalid OTP.';
+        } catch (error) {
+            otpMessage.textContent = 'Verification failed. Please try again.';
+        }
+    }
+
+    confirmBtn.addEventListener('click', verifyOtp);
+    resendBtn.addEventListener('click', sendOtp);
+    otpInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            verifyOtp();
+        }
+    });
+
+    sendOtp();
+})();
+
 // Form validation
 function validateForm(formId) {
     const form = document.getElementById(formId);
