@@ -1,7 +1,23 @@
 <?php
+// Start output buffering to prevent header issues
+ob_start();
+
 // Include authentication helper and require proper authentication
 require_once __DIR__ . '/../includes/auth_helper.php';
 requireAuth();
+
+// FORCE redirect for non-admin users
+$roleId = intval($_SESSION['role_id'] ?? 1);
+error_log("INDEX.PHP - Current role_id: " . $roleId);
+error_log("INDEX.PHP - Session data: " . print_r($_SESSION, true));
+
+if ($roleId !== 1) {
+    error_log("INDEX.PHP - Redirecting role_id $roleId to employee_payslip.php");
+    ob_end_clean();
+    header('Location: employee_payslip.php');
+    exit();
+}
+error_log("INDEX.PHP - Admin user (role_id 1) staying on dashboard");
 ?>
 <!DOCTYPE html>
 <html lang="en">
