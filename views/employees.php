@@ -507,8 +507,7 @@ if ($_POST) {
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('add-employee-modal')"></div>
 
             <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-                <form method="POST" action="">
-                    <input type="hidden" name="action" value="add_employee">
+                <form id="add-employee-form" onsubmit="handleAddEmployee(event)">
                     <div class="bg-white px-6 pt-6 pb-4">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg leading-6 font-medium text-gray-900">Add New Employee</h3>
@@ -520,55 +519,70 @@ if ($_POST) {
                         <div class="space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                                     <input type="text" name="first_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                                     <input type="text" name="last_name" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                                    <input type="text" name="middle_name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                                    <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <input type="tel" name="phone" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                                    <input type="date" name="date_of_birth" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                                    <select name="department_id" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                                        <option value="">Select Department</option>
-                                        <?php foreach ($departments_form as $dept): ?>
-                                            <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['dept_name']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <input type="text" name="department" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="e.g., Information Technology">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                                    <select name="position_id" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                                        <option value="">Select Position</option>
-                                        <?php foreach ($positions_form as $pos): ?>
-                                            <option value="<?php echo $pos['id']; ?>"><?php echo htmlspecialchars($pos['position_title']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <input type="text" name="position" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="e.g., Software Developer">
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Hire Date</label>
-                                    <input type="date" name="hire_date" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Hire Date *</label>
+                                    <input type="date" name="hire_date" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" value="<?php echo date('Y-m-d'); ?>">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Basic Salary</label>
-                                    <input type="number" name="basic_salary" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="50000">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Employment Status *</label>
+                                    <select name="employment_status" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                                        <option value="Active" selected>Active</option>
+                                        <option value="On Leave">On Leave</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
                                 </div>
                             </div>
 
+                            <div id="add-employee-message" class="hidden text-sm mt-2"></div>
+
                             <div class="flex justify-end pt-4 border-t border-gray-200">
                                 <button type="button" class="mr-3 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400" onclick="closeModal('add-employee-modal')">Cancel</button>
-                                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700">Add Employee</button>
+                                <button type="submit" id="add-employee-submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                    <i class="fas fa-user-plus mr-2"></i>Add Employee
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -836,6 +850,77 @@ if ($_POST) {
                     row.style.display = 'none';
                 }
             });
+        }
+
+        // Add Employee Form Handler
+        async function handleAddEmployee(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const submitBtn = document.getElementById('add-employee-submit');
+            const messageEl = document.getElementById('add-employee-message');
+            const formData = new FormData(form);
+            
+            // Convert FormData to JSON
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+            messageEl.className = 'hidden text-sm mt-2';
+            
+            try {
+                const response = await fetch('/HCM/api/employees.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success message
+                    messageEl.className = 'text-green-600 text-sm mt-2';
+                    messageEl.textContent = result.message || 'Employee created successfully!';
+                    
+                    // Show credentials info
+                    if (result.data.username) {
+                        messageEl.innerHTML = `
+                            <div class="bg-green-50 border border-green-200 rounded p-3">
+                                <p class="font-semibold mb-2">✓ ${result.message}</p>
+                                <p class="text-xs"><strong>Username:</strong> ${result.data.username}</p>
+                                <p class="text-xs"><strong>Employee #:</strong> ${result.data.employee_number}</p>
+                                <p class="text-xs mt-1 text-gray-600">Credentials have been emailed to the employee.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Reset form
+                    form.reset();
+                    
+                    // Reload page after 3 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    // Show error message
+                    messageEl.className = 'text-red-600 text-sm mt-2 bg-red-50 border border-red-200 rounded p-2';
+                    messageEl.textContent = result.error || 'Failed to create employee';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Add Employee';
+                }
+            } catch (error) {
+                console.error('Error creating employee:', error);
+                messageEl.className = 'text-red-600 text-sm mt-2 bg-red-50 border border-red-200 rounded p-2';
+                messageEl.textContent = 'Failed to create employee. Please try again.';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Add Employee';
+            }
         }
     </script>
 </body>
