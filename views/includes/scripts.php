@@ -41,16 +41,33 @@ function closeModal(modalId) {
 
     async function sendOtp() {
         otpMessage.textContent = '';
+        otpMessage.classList.remove('text-red-600', 'text-green-600');
         resendBtn.disabled = true;
         resendBtn.classList.add('opacity-60');
 
         try {
-            const response = await fetch('../api/otp.php?action=send', { method: 'POST' });
+            const response = await fetch('/HCM/api/otp.php?action=send', { method: 'POST' });
+            
+            if (!response.ok) {
+                console.error('OTP API HTTP error:', response.status, response.statusText);
+                otpMessage.className = 'text-red-600 text-sm mt-2';
+                otpMessage.textContent = `HTTP Error: ${response.status}`;
+                return;
+            }
+            
             const data = await response.json();
-            if (!data.success) {
+            console.log('OTP API response:', data);
+            
+            if (data.success) {
+                otpMessage.className = 'text-green-600 text-sm mt-2';
+                otpMessage.textContent = 'OTP sent to your email';
+            } else {
+                otpMessage.className = 'text-red-600 text-sm mt-2';
                 otpMessage.textContent = data.error || 'Failed to send OTP';
             }
         } catch (error) {
+            console.error('OTP send error:', error);
+            otpMessage.className = 'text-red-600 text-sm mt-2';
             otpMessage.textContent = 'Failed to send OTP. Please try again.';
         } finally {
             setTimeout(() => {
@@ -69,7 +86,7 @@ function closeModal(modalId) {
         }
 
         try {
-            const response = await fetch('../api/otp.php?action=verify', {
+            const response = await fetch('/HCM/api/otp.php?action=verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ otp })
@@ -81,6 +98,7 @@ function closeModal(modalId) {
             }
             otpMessage.textContent = data.error || 'Invalid OTP.';
         } catch (error) {
+            console.error('OTP verify error:', error);
             otpMessage.textContent = 'Verification failed. Please try again.';
         }
     }
@@ -391,3 +409,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeGlobalSearch();
 });
 </script>
+
+<!-- Include HCM Chatbot -->
+<?php include __DIR__ . '/../../includes/chatbot.php'; ?>
