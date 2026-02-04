@@ -238,26 +238,21 @@ checkPermission(['tax_deduction']);
             const month = document.getElementById('monthFilter').value;
 
             try {
-                const token = localStorage.getItem('token');
-                let url = `${API_BASE_URL}/payroll.php?action=my_tax_deductions&year=${year}`;
-                if (month) {
-                    url += `&month=${month}`;
-                }
-                
-                const response = await fetch(url, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
+                const response = await fetch(`${API_BASE_URL}/payroll.php?action=my_tax_deductions&year=${year}`);
                 const data = await response.json();
+
                 if (data.success) {
                     taxData = data.data || [];
+
+                    if (month) {
+                        taxData = taxData.filter(record => parseInt(record.month, 10) === parseInt(month, 10));
+                    }
+
                     updateSummaryCards();
                     updateCharts();
                     displayTaxTable();
                 } else {
-                    throw new Error(data.message || 'Failed to load tax data');
+                    throw new Error(data.error || data.message || 'Failed to load tax data');
                 }
             } catch (error) {
                 console.error('Error loading tax data:', error);
@@ -281,9 +276,9 @@ checkPermission(['tax_deduction']);
 
             taxData.forEach(record => {
                 totals.incomeTax += parseFloat(record.income_tax || 0);
-                totals.sss += parseFloat(record.sss || 0);
-                totals.philHealth += parseFloat(record.philhealth || 0);
-                totals.pagIBIG += parseFloat(record.pagibig || 0);
+                totals.sss += parseFloat(record.sss_contribution || 0);
+                totals.philHealth += parseFloat(record.philhealth_contribution || 0);
+                totals.pagIBIG += parseFloat(record.pagibig_contribution || 0);
             });
 
             const month = document.getElementById('monthFilter').value;
@@ -307,8 +302,8 @@ checkPermission(['tax_deduction']);
             const monthlyData = new Array(12).fill(0);
 
             taxData.forEach(record => {
-                const month = new Date(record.pay_period_end).getMonth();
-                monthlyData[month] += parseFloat(record.income_tax || 0);
+                const monthIndex = Math.max(1, Math.min(12, parseInt(record.month, 10))) - 1;
+                monthlyData[monthIndex] += parseFloat(record.income_tax || 0);
             });
 
             const ctx1 = document.getElementById('monthlyTaxChart');
@@ -361,9 +356,9 @@ checkPermission(['tax_deduction']);
 
             taxData.forEach(record => {
                 totals.incomeTax += parseFloat(record.income_tax || 0);
-                totals.sss += parseFloat(record.sss || 0);
-                totals.philHealth += parseFloat(record.philhealth || 0);
-                totals.pagIBIG += parseFloat(record.pagibig || 0);
+                totals.sss += parseFloat(record.sss_contribution || 0);
+                totals.philHealth += parseFloat(record.philhealth_contribution || 0);
+                totals.pagIBIG += parseFloat(record.pagibig_contribution || 0);
             });
 
             const ctx2 = document.getElementById('deductionBreakdownChart');
@@ -424,8 +419,7 @@ checkPermission(['tax_deduction']);
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Pay</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pay Period</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Income Tax</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SSS</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PhilHealth</th>
@@ -437,30 +431,28 @@ checkPermission(['tax_deduction']);
             `;
 
             taxData.forEach(record => {
-                const totalDeductions = parseFloat(record.income_tax || 0) + 
-                                       parseFloat(record.sss || 0) + 
-                                       parseFloat(record.philhealth || 0) + 
-                                       parseFloat(record.pagibig || 0);
+                const totalDeductions = parseFloat(record.total_deductions || 0) || (
+                                       parseFloat(record.income_tax || 0) + 
+                                       parseFloat(record.sss_contribution || 0) + 
+                                       parseFloat(record.philhealth_contribution || 0) + 
+                                       parseFloat(record.pagibig_contribution || 0));
 
                 html += `
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${formatDate(record.pay_period_start)} - ${formatDate(record.pay_period_end)}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            ₱${parseFloat(record.gross_pay || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
+                            ${formatMonthYear(record.month, record.year)}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
                             ₱${parseFloat(record.income_tax || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                            ₱${parseFloat(record.sss || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
+                            ₱${parseFloat(record.sss_contribution || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                            ₱${parseFloat(record.philhealth || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
+                            ₱${parseFloat(record.philhealth_contribution || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                            ₱${parseFloat(record.pagibig || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
+                            ₱${parseFloat(record.pagibig_contribution || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-700">
                             ₱${totalDeductions.toLocaleString('en-PH', {minimumFractionDigits: 2})}
@@ -484,15 +476,16 @@ checkPermission(['tax_deduction']);
                 return;
             }
 
-            let csv = 'Period Start,Period End,Gross Pay,Income Tax,SSS,PhilHealth,Pag-IBIG,Total Deductions\n';
+            let csv = 'Month,Year,Income Tax,SSS,PhilHealth,Pag-IBIG,Total Deductions\n';
 
             taxData.forEach(record => {
-                const totalDeductions = parseFloat(record.income_tax || 0) + 
-                                       parseFloat(record.sss || 0) + 
-                                       parseFloat(record.philhealth || 0) + 
-                                       parseFloat(record.pagibig || 0);
+                const totalDeductions = parseFloat(record.total_deductions || 0) || (
+                                       parseFloat(record.income_tax || 0) + 
+                                       parseFloat(record.sss_contribution || 0) + 
+                                       parseFloat(record.philhealth_contribution || 0) + 
+                                       parseFloat(record.pagibig_contribution || 0));
 
-                csv += `${record.pay_period_start},${record.pay_period_end},${record.gross_pay || 0},${record.income_tax || 0},${record.sss || 0},${record.philhealth || 0},${record.pagibig || 0},${totalDeductions}\n`;
+                csv += `${record.month},${record.year},${record.income_tax || 0},${record.sss_contribution || 0},${record.philhealth_contribution || 0},${record.pagibig_contribution || 0},${totalDeductions}\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -512,6 +505,12 @@ checkPermission(['tax_deduction']);
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatMonthYear(month, year) {
+            const monthIndex = Math.max(1, Math.min(12, parseInt(month, 10))) - 1;
+            const date = new Date(parseInt(year, 10), monthIndex, 1);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
         }
 
         // Show notification
