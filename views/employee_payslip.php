@@ -128,6 +128,35 @@ checkPermission(['payslip']);
         </div>
     </div>
 
+    <!-- Payslip Modal (same layout as admin payroll) -->
+    <div id="payslip-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('payslip-modal')"></div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-6 pt-6 pb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Employee Payslip</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeModal('payslip-modal')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div id="payslip-content" class="space-y-4">
+                        <!-- Payslip content will be inserted here -->
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-gray-200 mt-6">
+                        <button type="button" class="mr-3 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400" onclick="closeModal('payslip-modal')">Close</button>
+                        <button type="button" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700" onclick="printPayslip()">
+                            <i class="fas fa-print mr-2"></i>Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = '../api';
         let allPayslips = [];
@@ -152,19 +181,14 @@ checkPermission(['payslip']);
         // Load payslips from API
         async function loadPayslips() {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_BASE_URL}/payroll.php?action=my_payslips`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
+                const response = await fetch(`${API_BASE_URL}/payroll.php?action=my_payslips`);
                 const data = await response.json();
+
                 if (data.success) {
                     allPayslips = data.data || [];
                     displayPayslips(allPayslips);
                 } else {
-                    throw new Error(data.message || 'Failed to load payslips');
+                    throw new Error(data.error || data.message || 'Failed to load payslips');
                 }
             } catch (error) {
                 console.error('Error loading payslips:', error);
@@ -185,11 +209,11 @@ checkPermission(['payslip']);
             let filtered = allPayslips;
 
             if (year) {
-                filtered = filtered.filter(p => new Date(p.pay_period_end).getFullYear() == year);
+                filtered = filtered.filter(p => new Date(p.pay_date).getFullYear() == year);
             }
 
             if (month) {
-                filtered = filtered.filter(p => new Date(p.pay_period_end).getMonth() + 1 == month);
+                filtered = filtered.filter(p => new Date(p.pay_date).getMonth() + 1 == month);
             }
 
             displayPayslips(filtered);
@@ -226,8 +250,11 @@ checkPermission(['payslip']);
             `;
 
             payslips.forEach(payslip => {
-                const statusClass = payslip.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                                   payslip.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                const statusValue = (payslip.status || '').toString().toLowerCase();
+                const statusClass = statusValue === 'paid' ? 'bg-green-100 text-green-800' : 
+                                   statusValue === 'approved' ? 'bg-blue-100 text-blue-800' :
+                                   statusValue === 'processing' ? 'bg-yellow-100 text-yellow-800' : 
+                                   statusValue === 'draft' ? 'bg-gray-100 text-gray-800' :
                                    'bg-gray-100 text-gray-800';
 
                 html += `
@@ -249,7 +276,7 @@ checkPermission(['payslip']);
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="${statusClass} text-xs font-medium px-2.5 py-0.5 rounded">
-                                ${payslip.status}
+                                ${payslip.status || 'Unknown'}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -278,14 +305,9 @@ checkPermission(['payslip']);
         // View payslip details
         async function viewPayslip(payslipId) {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_BASE_URL}/payroll.php?action=get_payslip&id=${payslipId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
+                const response = await fetch(`${API_BASE_URL}/payroll.php?action=get_payslip&id=${payslipId}`);
                 const data = await response.json();
+
                 if (data.success) {
                     showPayslipModal(data.data);
                 } else {
@@ -300,24 +322,11 @@ checkPermission(['payslip']);
         // Download payslip as PDF
         async function downloadPayslip(payslipId) {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_BASE_URL}/payroll.php?action=download_payslip&id=${payslipId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const response = await fetch(`${API_BASE_URL}/payroll.php?action=get_payslip&id=${payslipId}`);
+                const data = await response.json();
 
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `payslip_${payslipId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    showNotification('Payslip downloaded successfully', 'success');
+                if (data.success) {
+                    openPayslipPrintWindow(data.data, true);
                 } else {
                     showNotification('Failed to download payslip', 'error');
                 }
@@ -328,21 +337,216 @@ checkPermission(['payslip']);
         }
 
         // Print payslip
-        async function printPayslip(payslipId) {
+        async function printPayslip(payslipId = null) {
             try {
-                const token = localStorage.getItem('token');
-                const url = `${API_BASE_URL}/payroll.php?action=print_payslip&id=${payslipId}&token=${token}`;
-                window.open(url, '_blank');
+                if (payslipId) {
+                    const response = await fetch(`${API_BASE_URL}/payroll.php?action=get_payslip&id=${payslipId}`);
+                    const data = await response.json();
+                    if (!data.success) {
+                        showNotification('Failed to load payslip for print', 'error');
+                        return;
+                    }
+                    openPayslipPrintWindow(data.data, false);
+                } else if (window.currentPayslipData) {
+                    openPayslipPrintWindow(window.currentPayslipData, false);
+                }
             } catch (error) {
                 console.error('Error printing payslip:', error);
                 showNotification('Error printing payslip', 'error');
             }
         }
 
+        function buildPayslipHtml(payslip) {
+            const payPeriodLabel = `${formatDate(payslip.pay_period_start)} - ${formatDate(payslip.pay_period_end)}`;
+
+            const deductions = {
+                incomeTax: parseFloat(payslip.withholding_tax || 0),
+                sss: parseFloat(payslip.sss_contribution || 0),
+                philhealth: parseFloat(payslip.philhealth_contribution || 0),
+                pagibig: parseFloat(payslip.pagibig_contribution || 0)
+            };
+
+            const deductionsTotal = parseFloat(payslip.total_deductions || 0);
+            const fallbackTotal = deductions.incomeTax + deductions.sss + deductions.philhealth + deductions.pagibig;
+            const totalDeductions = deductionsTotal || fallbackTotal;
+
+            return `
+                <div class="bg-white border rounded-lg p-6">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">PAYSLIP</h2>
+                        <p class="text-gray-600">Pay Period: ${payPeriodLabel}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-2">Employee Information</h3>
+                            <div class="space-y-1 text-sm">
+                                <p><span class="font-medium">Name:</span> ${payslip.employee_name}</p>
+                                <p><span class="font-medium">Employee ID:</span> ${payslip.employee_code}</p>
+                                <p><span class="font-medium">Department:</span> ${payslip.department || 'N/A'}</p>
+                                <p><span class="font-medium">Position:</span> ${payslip.position_title || 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-2">Pay Details</h3>
+                            <div class="space-y-1 text-sm">
+                                <p><span class="font-medium">Pay Date:</span> ${formatDate(payslip.pay_date)}</p>
+                                <p><span class="font-medium">Pay Method:</span> Bank Transfer</p>
+                                <p><span class="font-medium">Currency:</span> PHP</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-3 text-green-700">EARNINGS</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>Basic Salary:</span>
+                                    <span class="font-medium">₱${formatCurrency(payslip.basic_salary)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Allowances:</span>
+                                    <span class="font-medium">₱${formatCurrency(payslip.allowances)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Overtime:</span>
+                                    <span class="font-medium">₱${formatCurrency(payslip.overtime_pay)}</span>
+                                </div>
+                                <div class="border-t pt-2 mt-2">
+                                    <div class="flex justify-between font-semibold text-green-700">
+                                        <span>Total Earnings:</span>
+                                        <span>₱${formatCurrency(payslip.gross_pay)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="font-semibold text-gray-900 mb-3 text-red-700">DEDUCTIONS</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>Income Tax:</span>
+                                    <span class="font-medium">₱${formatCurrency(deductions.incomeTax)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>SSS:</span>
+                                    <span class="font-medium">₱${formatCurrency(deductions.sss)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>PhilHealth:</span>
+                                    <span class="font-medium">₱${formatCurrency(deductions.philhealth)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Pag-IBIG:</span>
+                                    <span class="font-medium">₱${formatCurrency(deductions.pagibig)}</span>
+                                </div>
+                                <div class="border-t pt-2 mt-2">
+                                    <div class="flex justify-between font-semibold text-red-700">
+                                        <span>Total Deductions:</span>
+                                        <span>₱${formatCurrency(totalDeductions)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t mt-6 pt-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xl font-bold text-gray-900">NET PAY:</span>
+                            <span class="text-2xl font-bold text-blue-600">₱${formatCurrency(payslip.net_pay)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showPayslipModal(payslip) {
+            const payslipContent = document.getElementById('payslip-content');
+            payslipContent.innerHTML = buildPayslipHtml(payslip);
+
+            window.currentPayslipData = payslip;
+            openModal('payslip-modal');
+        }
+
+        function openPayslipPrintWindow(payslip, autoPrint = false) {
+            const payslipContent = buildPayslipHtml(payslip);
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Payslip - ${payslip.employee_name || 'Employee'}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .grid { display: grid; }
+                        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+                        .gap-6 { gap: 1.5rem; }
+                        .mb-6 { margin-bottom: 1.5rem; }
+                        .font-bold { font-weight: bold; }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .text-gray-600 { color: #4b5563; }
+                        .text-gray-900 { color: #111827; }
+                        .text-green-700 { color: #15803d; }
+                        .text-red-700 { color: #b91c1c; }
+                        .text-blue-600 { color: #2563eb; }
+                        .border { border: 1px solid #e5e7eb; }
+                        .rounded-lg { border-radius: 0.5rem; }
+                        .p-6 { padding: 1.5rem; }
+                        .pt-2 { padding-top: 0.5rem; }
+                        .pt-4 { padding-top: 1rem; }
+                        .mt-2 { margin-top: 0.5rem; }
+                        .mt-6 { margin-top: 1.5rem; }
+                        .border-t { border-top: 1px solid #e5e7eb; }
+                        .space-y-1 > * + * { margin-top: 0.25rem; }
+                        .space-y-2 > * + * { margin-top: 0.5rem; }
+                        .text-sm { font-size: 0.875rem; }
+                        .text-xl { font-size: 1.25rem; }
+                        .text-2xl { font-size: 1.5rem; }
+                        .font-semibold { font-weight: 600; }
+                        .flex { display: flex; }
+                        .justify-between { justify-content: space-between; }
+                        .items-center { align-items: center; }
+                    </style>
+                </head>
+                <body>
+                    ${payslipContent}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            if (autoPrint) {
+                printWindow.focus();
+                printWindow.print();
+            }
+        }
+
+        function formatCurrency(value) {
+            const number = parseFloat(value || 0);
+            return number.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
         // Helper: Format date
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
         }
 
         // Show notification
