@@ -151,11 +151,11 @@ $messageType = $_GET['type'] ?? '';
                 <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                     <div class="flex items-center">
                         <div class="p-2 bg-purple-100 rounded-lg">
-                            <i class="fas fa-peso-sign text-purple-600 text-xl"></i>
+                            <i class="fas fa-building text-purple-600 text-xl"></i>
                         </div>
                         <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Monthly Premium</p>
-                            <p id="totalPremium" class="text-2xl font-bold text-gray-900">₱0</p>
+                            <p class="text-sm font-medium text-gray-600">Active Providers</p>
+                            <p id="activeProviders" class="text-2xl font-bold text-gray-900">0</p>
                         </div>
                     </div>
                 </div>
@@ -485,7 +485,7 @@ $messageType = $_GET['type'] ?? '';
             document.getElementById('activePlansCount').textContent = stats.active_plans;
             document.getElementById('totalEnrollments').textContent = stats.total_enrollments;
             document.getElementById('pendingEnrollments').textContent = stats.pending_enrollments;
-            document.getElementById('totalPremium').textContent = '₱' + Number(stats.total_monthly_premium).toLocaleString();
+            document.getElementById('activeProviders').textContent = stats.active_providers || 0;
         }
 
         // Display benefit plans
