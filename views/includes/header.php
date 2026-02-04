@@ -87,3 +87,22 @@ $search_config = $search_contexts[$current_page] ?? ['placeholder' => 'Search em
         </div>
     </div>
 </nav>
+
+<?php if (!empty($_SESSION['is_new'])): ?>
+<div id="otp-modal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-70"></div>
+    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">Email Verification Required</h2>
+        <p class="text-sm text-gray-600 mb-4">We've sent a one-time code to your email. Enter it below to continue.</p>
+        <div class="space-y-3">
+            <input id="otp-input" type="text" maxlength="6" class="w-full border border-gray-300 rounded-lg p-3 text-center text-lg tracking-widest focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter OTP" />
+            <div class="flex gap-2">
+                <button id="otp-confirm" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700">Confirm OTP</button>
+                <button id="otp-resend" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Resend OTP</button>
+            </div>
+            <a href="logout.php" class="block text-center text-red-600 hover:text-red-700 text-sm">Logout</a>
+            <p id="otp-message" class="text-sm text-red-600"></p>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
