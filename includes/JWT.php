@@ -239,8 +239,9 @@ class AuthManager {
 
     private function getUserByUsername($username) {
         return $this->db->selectOne(
-            "SELECT u.*, e.id as employee_id, e.first_name, e.last_name, e.email as employee_email
+            "SELECT u.*, r.role_name as role, u.role_id, e.id as employee_id, e.first_name, e.last_name, e.email as employee_email
              FROM users u
+             LEFT JOIN roles r ON u.role_id = r.id
              LEFT JOIN employees e ON u.id = e.user_id
              WHERE u.username = :username OR u.email = :email",
             ['username' => $username, 'email' => $username]
@@ -249,8 +250,9 @@ class AuthManager {
 
     private function getUserById($id) {
         return $this->db->selectOne(
-            "SELECT u.*, e.id as employee_id, e.first_name, e.last_name, e.email as employee_email
+            "SELECT u.*, r.role_name as role, u.role_id, e.id as employee_id, e.first_name, e.last_name, e.email as employee_email
              FROM users u
+             LEFT JOIN roles r ON u.role_id = r.id
              LEFT JOIN employees e ON u.id = e.user_id
              WHERE u.id = :id",
             ['id' => $id]
@@ -263,6 +265,7 @@ class AuthManager {
             'username' => $user['username'],
             'email' => $user['email'],
             'role' => $user['role'],
+            'role_id' => $user['role_id'],
             'employee_id' => $user['employee_id']
         ];
 
@@ -276,6 +279,7 @@ class AuthManager {
             'email' => $user['email'],
             'employee_email' => $user['employee_email'],
             'role' => $user['role'],
+            'role_id' => $user['role_id'],
             'employee_id' => $user['employee_id'],
             'first_name' => $user['first_name'],
             'last_name' => $user['last_name'],
