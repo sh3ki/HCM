@@ -1,14 +1,36 @@
 <?php
+// Disable error display, only log errors
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/Database.php';
 require_once __DIR__ . '/../includes/otp_mailer.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    exit();
+}
+
+session_start();
+
+if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit();
+}
+
+try {
+    $db = Database::getInstance();
+    $pdo = $db->getConnection();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
     exit();
 }
 
@@ -50,7 +72,7 @@ switch ($action) {
 }
 
 function otpStatus() {
-    $pdo = getDbConnection();
+    global $pdo;
     $userId = $_SESSION['user_id'] ?? null;
 
     if (!$userId) {
@@ -67,7 +89,7 @@ function otpStatus() {
 }
 
 function sendOtp() {
-    $pdo = getDbConnection();
+    global $pdo;
     $userId = $_SESSION['user_id'] ?? null;
 
     if (!$userId) {
@@ -76,7 +98,7 @@ function sendOtp() {
         return;
     }
 
-    $stmt = $pdo->prepare("SELECT u.email, e.email AS employee_email, e.first_name, e.last_name, u.is_new
+    $stmt = $pdo->prepare("SELECT u.email, e.first_name, e.last_name, u.is_new
         FROM users u
         LEFT JOIN employees e ON e.user_id = u.id
         WHERE u.id = :id LIMIT 1");
@@ -94,7 +116,7 @@ function sendOtp() {
         return;
     }
 
-    $email = $user['employee_email'] ?: $user['email'];
+    $email = $user['email'];
     if (!$email) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'No email found for user']);
@@ -117,28 +139,30 @@ function sendOtp() {
     $sentAt = date('Y-m-d H:i:s');
 
     $stmt = $pdo->prepare("INSERT INTO user_otps (user_id, otp_code, otp_expires_at, otp_last_sent_at, otp_attempts, otp_verified_at, updated_at)
-        VALUES (:user_id, :otp_code, :expires_at, :sent_at, 0, NULL, :sent_at)
+        VALUES (:user_id, :otp_code, :expires_at, :sent_at, 0, NULL, :updated_at)
         ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), otp_expires_at = VALUES(otp_expires_at), otp_last_sent_at = VALUES(otp_last_sent_at), otp_attempts = 0, otp_verified_at = NULL, updated_at = VALUES(updated_at)");
     $stmt->execute([
         'user_id' => $userId,
         'otp_code' => $otpHash,
         'expires_at' => $expiresAt,
-        'sent_at' => $sentAt
+        'sent_at' => $sentAt,
+        'updated_at' => $sentAt
     ]);
 
     $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
 
     try {
-        sendOtpEmail($email, $fullName, $otp);
-        echo json_encode(['success' => true, 'message' => 'OTP sent']);
+        $result = sendOtpEmail($email, $fullName, $otp);
+        echo json_encode(['success' => true, 'message' => 'OTP sent to your email']);
     } catch (Exception $e) {
+        error_log('OTP email failed: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Failed to send OTP: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => 'Failed to send OTP email']);
     }
 }
 
 function verifyOtp() {
-    $pdo = getDbConnection();
+    global $pdo;
     $userId = $_SESSION['user_id'] ?? null;
     $input = json_decode(file_get_contents('php://input'), true);
     $otp = trim($input['otp'] ?? '');
