@@ -6,10 +6,16 @@ session_start();
 // Include auth helper
 require_once __DIR__ . '/../includes/auth_helper.php';
 
-// If already authenticated, redirect to dashboard
+// If already authenticated, redirect to appropriate page
 if (isAuthenticated()) {
-    header('Location: index.php');
-    exit();
+    $roleId = intval($_SESSION['role_id'] ?? 1); // Default to admin if not set
+    if ($roleId !== 1) { // If not admin (role_id 1), redirect to employee payslip
+        header('Location: employee_payslip.php');
+        exit();
+    } else {
+        header('Location: index.php');
+        exit();
+    }
 }
 
 // Handle login form submission
@@ -61,6 +67,8 @@ if ($_POST) {
         if ($httpCode === 200 && $responseData && isset($responseData['success']) && $responseData['success']) {
             // Store authentication data in session
             $_SESSION['user_id'] = $responseData['data']['user']['id'] ?? null;
+            $_SESSION['role_id'] = $responseData['data']['user']['role_id'] ?? 1; // Store role_id
+            $_SESSION['employee_id'] = $responseData['data']['user']['employee_id'] ?? null;
             $_SESSION['username'] = $responseData['data']['user']['username'] ?? null;
             $_SESSION['email'] = $responseData['data']['user']['email'] ?? null;
             $_SESSION['employee_email'] = $responseData['data']['user']['employee_email'] ?? null;
@@ -71,17 +79,18 @@ if ($_POST) {
             $_SESSION['refresh_token'] = $responseData['data']['refresh_token'] ?? null;
             $_SESSION['authenticated'] = true;
 
-            // Debug logging
-            error_log("Login successful for user: " . $_SESSION['username']);
-            error_log("Session authenticated: " . ($_SESSION['authenticated'] ? 'true' : 'false'));
-            error_log("Redirecting to dashboard...");
-
             // Clear any output buffer before redirect
             ob_end_clean();
             
-            // Redirect to dashboard
-            header('Location: index.php');
-            exit();
+            // Redirect based on role_id (1 = Admin, all others = Employee)
+            $roleId = intval($_SESSION['role_id'] ?? 1);
+            if ($roleId !== 1) {
+                header('Location: employee_payslip.php');
+                exit();
+            } else {
+                header('Location: index.php');
+                exit();
+            }
         } else {
             // Handle various error scenarios
             if ($responseData && isset($responseData['message'])) {
