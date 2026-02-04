@@ -40,15 +40,15 @@ $search_config = $search_contexts[$current_page] ?? ['placeholder' => 'Search em
             <!-- Search Bar (Only for admin/HR pages) -->
             <div class="hidden lg:flex items-center lg:ml-6">
                 <div class="relative">
-                    <input type="search" 
+                    <!-- <input type="search" 
                            id="globalSearch" 
                            class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary focus:border-primary block w-80 pl-10 p-2.5" 
                            placeholder="<?php echo htmlspecialchars($search_config['placeholder']); ?>" 
                            data-context="<?php echo htmlspecialchars($search_config['context']); ?>"
-                           autocomplete="off">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                           autocomplete="off"> -->
+                    <!-- <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-500"></i>
-                    </div>
+                    </div> -->
                     <!-- Search Results Dropdown -->
                     <div id="searchResults" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden max-h-96 overflow-y-auto">
                         <div id="searchContent" class="p-2"></div>
