@@ -88,13 +88,13 @@ $search_config = $search_contexts[$current_page] ?? ['placeholder' => 'Search em
     </div>
 </nav>
 
-<!-- Password Change Modal (appears before OTP modal for newly created employees) -->
-<?php if (!empty($_SESSION['requires_password_change'])): ?>
+<!-- Password Change Modal (appears for users with auto-generated passwords) -->
+<?php if (!empty($_SESSION['auto_password_changed']) && $_SESSION['auto_password_changed'] == 1): ?>
 <div id="password-change-modal" class="fixed inset-0 z-50 flex items-center justify-center">
     <div class="fixed inset-0 bg-gray-900 bg-opacity-70"></div>
     <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
         <h2 class="text-xl font-semibold text-gray-900 mb-2">Change Your Password</h2>
-        <p class="text-sm text-gray-600 mb-4">For security, please change your temporary password. You can skip this and change it later.</p>
+        <p class="text-sm text-gray-600 mb-4">You are currently using an auto-generated password. Please change it to a secure password of your choice. You can skip this for now, but you'll be prompted again next time.</p>
         <div class="space-y-3">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
