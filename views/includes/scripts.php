@@ -27,6 +27,122 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
 
+// Password Change Modal Logic (appears before OTP for newly created employees)
+(function initPasswordChangeModal() {
+    const passwordModal = document.getElementById('password-change-modal');
+    if (!passwordModal) return;
+
+    const newPasswordInput = document.getElementById('new-password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    const confirmBtn = document.getElementById('password-change-confirm');
+    const skipBtn = document.getElementById('password-change-skip');
+    const messageEl = document.getElementById('password-change-message');
+
+    document.body.classList.add('overflow-hidden');
+
+    async function changePassword() {
+        messageEl.textContent = '';
+        messageEl.classList.remove('text-red-600', 'text-green-600');
+
+        const newPassword = newPasswordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
+
+        if (!newPassword || !confirmPassword) {
+            messageEl.className = 'text-red-600 text-sm mt-2';
+            messageEl.textContent = 'Please fill in both password fields.';
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            messageEl.className = 'text-red-600 text-sm mt-2';
+            messageEl.textContent = 'Passwords do not match.';
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            messageEl.className = 'text-red-600 text-sm mt-2';
+            messageEl.textContent = 'Password must be at least 6 characters long.';
+            return;
+        }
+
+        try {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Changing...';
+
+            const response = await fetch('/HCM/api/change_password.php?action=change', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                messageEl.className = 'text-green-600 text-sm mt-2';
+                messageEl.textContent = 'Password changed successfully!';
+                setTimeout(() => {
+                    passwordModal.style.display = 'none';
+                    showOtpModal();
+                }, 1000);
+            } else {
+                messageEl.className = 'text-red-600 text-sm mt-2';
+                messageEl.textContent = data.error || 'Failed to change password.';
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Change Password';
+            }
+        } catch (error) {
+            console.error('Password change error:', error);
+            messageEl.className = 'text-red-600 text-sm mt-2';
+            messageEl.textContent = 'Failed to change password. Please try again.';
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Change Password';
+        }
+    }
+
+    async function skipPasswordChange() {
+        try {
+            skipBtn.disabled = true;
+            skipBtn.textContent = 'Skipping...';
+
+            const response = await fetch('/HCM/api/change_password.php?action=skip', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                passwordModal.style.display = 'none';
+                showOtpModal();
+            } else {
+                skipBtn.disabled = false;
+                skipBtn.textContent = 'Skip for Now';
+            }
+        } catch (error) {
+            console.error('Skip password error:', error);
+            skipBtn.disabled = false;
+            skipBtn.textContent = 'Skip for Now';
+        }
+    }
+
+    function showOtpModal() {
+        const otpModal = document.getElementById('otp-modal');
+        if (otpModal) {
+            otpModal.style.display = 'flex';
+        }
+    }
+
+    confirmBtn.addEventListener('click', changePassword);
+    skipBtn.addEventListener('click', skipPasswordChange);
+    
+    // Allow Enter key to submit
+    newPasswordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') changePassword();
+    });
+    confirmPasswordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') changePassword();
+    });
+})();
+
 // OTP modal logic for new users
 (function initOtpModal() {
     const otpModal = document.getElementById('otp-modal');
@@ -37,7 +153,12 @@ function closeModal(modalId) {
     const resendBtn = document.getElementById('otp-resend');
     const otpMessage = document.getElementById('otp-message');
 
-    document.body.classList.add('overflow-hidden');
+    // Only show modal and block body scroll if password change modal is not present
+    const passwordModal = document.getElementById('password-change-modal');
+    if (!passwordModal) {
+        document.body.classList.add('overflow-hidden');
+        otpModal.style.display = 'flex';
+    }
 
     async function sendOtp() {
         otpMessage.textContent = '';
