@@ -267,6 +267,7 @@ class AuthManager {
             'role' => $user['role'],
             'role_id' => $user['role_id'],
             'is_new' => $user['is_new'] ?? 0,
+            'auto_password_changed' => $user['auto_password_changed'] ?? 0,
             'employee_id' => $user['employee_id']
         ];
 
@@ -282,6 +283,7 @@ class AuthManager {
             'role' => $user['role'],
             'role_id' => $user['role_id'],
             'is_new' => $user['is_new'] ?? 0,
+            'auto_password_changed' => $user['auto_password_changed'] ?? 0,
             'requires_password_change' => $user['requires_password_change'] ?? 0,
             'employee_id' => $user['employee_id'],
             'first_name' => $user['first_name'],
