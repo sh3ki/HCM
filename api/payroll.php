@@ -27,6 +27,7 @@ if (!$isTestMode && (!isset($_SESSION['authenticated']) || $_SESSION['authentica
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_GET['path'] ?? '';
+$action = $_GET['action'] ?? ''; // Support action parameter as well
 
 switch ($method) {
     case 'GET':
@@ -48,12 +49,34 @@ switch ($method) {
 }
 
 function handleGetRequest($path) {
+    global $action;
+    
+    // Support 'action' parameter for backward compatibility
+    if (!$path && $action) {
+        $path = $action;
+    }
+    
     switch ($path) {
         case 'summary':
             getPayrollSummary();
             break;
         case 'records':
             getPayrollRecords();
+            break;
+        case 'my_payslips':
+            getEmployeePayslips();
+            break;
+        case 'my_tax_deductions':
+            getEmployeeTaxDeductions();
+            break;
+        case 'get_payslip':
+            $payslipId = $_GET['id'] ?? null;
+            if ($payslipId) {
+                getEmployeePayslipDetails($payslipId);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Payslip ID required']);
+            }
             break;
         case 'employee':
             $employeeId = $_GET['employee_id'] ?? null;
@@ -66,6 +89,9 @@ function handleGetRequest($path) {
             break;
         case 'periods':
             getPayrollPeriods();
+            break;
+        case 'current-period':
+            getCurrentMonthPeriod();
             break;
         default:
             getAllPayrollData();
@@ -355,6 +381,222 @@ function getEmployeePayroll($employeeId) {
     }
 }
 
+function getEmployeePayslips() {
+    try {
+        $pdo = getDbConnection();
+        $employeeId = $_SESSION['employee_id'] ?? null;
+        
+        if (!$employeeId && !empty($_SESSION['user_id'])) {
+            $stmt = $pdo->prepare("SELECT id FROM employees WHERE user_id = :user_id LIMIT 1");
+            $stmt->bindParam(':user_id', $_SESSION['user_id']);
+            $stmt->execute();
+            $employeeId = $stmt->fetchColumn();
+            if ($employeeId) {
+                $_SESSION['employee_id'] = $employeeId;
+            }
+        }
+        
+        if (!$employeeId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Employee ID not found for this user']);
+            return;
+        }
+        
+        // Get employee's payslips from payslip_records table
+        $stmt = $pdo->prepare("
+            SELECT 
+                pr.id,
+                pr.employee_id,
+                pr.payroll_period_id,
+                pr.pay_period_start,
+                pr.pay_period_end,
+                pr.pay_date,
+                pr.basic_salary,
+                pr.allowances,
+                pr.overtime_pay,
+                pr.gross_pay,
+                pr.sss_contribution,
+                pr.pagibig_contribution,
+                pr.philhealth_contribution,
+                pr.withholding_tax,
+                pr.total_deductions,
+                pr.net_pay,
+                pr.status,
+                pp.period_name
+            FROM payslip_records pr
+            JOIN payroll_periods pp ON pr.payroll_period_id = pp.id
+            WHERE pr.employee_id = :employee_id
+            ORDER BY pr.pay_date DESC
+        ");
+        
+        $stmt->bindParam(':employee_id', $employeeId);
+        $stmt->execute();
+        $payslips = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $payslips,
+            'count' => count($payslips)
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function getEmployeeTaxDeductions() {
+    try {
+        $pdo = getDbConnection();
+        $employeeId = $_SESSION['employee_id'] ?? null;
+        $year = $_GET['year'] ?? date('Y');
+        
+        if (!$employeeId && !empty($_SESSION['user_id'])) {
+            $stmt = $pdo->prepare("SELECT id FROM employees WHERE user_id = :user_id LIMIT 1");
+            $stmt->bindParam(':user_id', $_SESSION['user_id']);
+            $stmt->execute();
+            $employeeId = $stmt->fetchColumn();
+            if ($employeeId) {
+                $_SESSION['employee_id'] = $employeeId;
+            }
+        }
+        
+        if (!$employeeId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Employee ID not found for this user']);
+            return;
+        }
+        
+        // Get employee's tax records by month for the specified year
+        $stmt = $pdo->prepare("
+            SELECT 
+                id,
+                employee_id,
+                year,
+                month,
+                income_tax,
+                sss_contribution,
+                philhealth_contribution,
+                pagibig_contribution,
+                total_deductions
+            FROM employee_tax_records
+            WHERE employee_id = :employee_id AND year = :year
+            ORDER BY month ASC
+        ");
+        
+        $stmt->bindParam(':employee_id', $employeeId);
+        $stmt->bindParam(':year', $year);
+        $stmt->execute();
+        $taxRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calculate yearly totals
+        $yearlyTotals = [
+            'income_tax' => 0,
+            'sss' => 0,
+            'philhealth' => 0,
+            'pagibig' => 0,
+            'total' => 0
+        ];
+        
+        foreach ($taxRecords as $record) {
+            $yearlyTotals['income_tax'] += $record['income_tax'] ?? 0;
+            $yearlyTotals['sss'] += $record['sss_contribution'] ?? 0;
+            $yearlyTotals['philhealth'] += $record['philhealth_contribution'] ?? 0;
+            $yearlyTotals['pagibig'] += $record['pagibig_contribution'] ?? 0;
+            $yearlyTotals['total'] += $record['total_deductions'] ?? 0;
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $taxRecords,
+            'yearly_totals' => $yearlyTotals,
+            'year' => $year,
+            'count' => count($taxRecords)
+        ]);
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function getEmployeePayslipDetails($payslipId) {
+    try {
+        $pdo = getDbConnection();
+        $employeeId = $_SESSION['employee_id'] ?? null;
+
+        if (!$employeeId && !empty($_SESSION['user_id'])) {
+            $stmt = $pdo->prepare("SELECT id FROM employees WHERE user_id = :user_id LIMIT 1");
+            $stmt->bindParam(':user_id', $_SESSION['user_id']);
+            $stmt->execute();
+            $employeeId = $stmt->fetchColumn();
+            if ($employeeId) {
+                $_SESSION['employee_id'] = $employeeId;
+            }
+        }
+
+        if (!$employeeId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Employee ID not found for this user']);
+            return;
+        }
+
+        $stmt = $pdo->prepare("SELECT 
+                pr.id,
+                pr.employee_id,
+                pr.payroll_period_id,
+                pr.pay_period_start,
+                pr.pay_period_end,
+                pr.pay_date,
+                pr.basic_salary,
+                pr.allowances,
+                pr.overtime_pay,
+                pr.gross_pay,
+                pr.sss_contribution,
+                pr.pagibig_contribution,
+                pr.philhealth_contribution,
+                pr.withholding_tax,
+                pr.total_deductions,
+                pr.net_pay,
+                pr.status,
+                pp.period_name,
+                e.employee_id as employee_code,
+                e.first_name,
+                e.last_name,
+                d.dept_name as department,
+                p.position_title
+            FROM payslip_records pr
+            JOIN employees e ON pr.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN positions p ON e.position_id = p.id
+            LEFT JOIN payroll_periods pp ON pr.payroll_period_id = pp.id
+            WHERE pr.id = :payslip_id AND pr.employee_id = :employee_id
+            LIMIT 1
+        ");
+
+        $stmt->bindParam(':payslip_id', $payslipId);
+        $stmt->bindParam(':employee_id', $employeeId);
+        $stmt->execute();
+        $payslip = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$payslip) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Payslip not found']);
+            return;
+        }
+
+        $payslip['employee_name'] = trim(($payslip['first_name'] ?? '') . ' ' . ($payslip['last_name'] ?? ''));
+
+        echo json_encode([
+            'success' => true,
+            'data' => $payslip
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
 function getPayrollPeriods() {
     try {
         $pdo = getDbConnection();
@@ -398,6 +640,99 @@ function getPayrollPeriods() {
             'success' => true,
             'data' => $periods
         ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function getCurrentMonthPeriod() {
+    try {
+        $pdo = getDbConnection();
+
+        // Get current month and year
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+        $firstDay = date('Y-m-01');
+        $lastDay = date('Y-m-t');
+
+        // Try to find a period that matches the current month
+        $stmt = $pdo->prepare("
+            SELECT
+                id,
+                period_code,
+                period_name as name,
+                start_date,
+                end_date,
+                pay_date,
+                status,
+                total_gross,
+                total_deductions,
+                total_net,
+                created_at,
+                updated_at
+            FROM payroll_periods
+            WHERE (
+                (MONTH(start_date) = :month AND YEAR(start_date) = :year)
+                OR (MONTH(end_date) = :month AND YEAR(end_date) = :year)
+                OR (start_date <= :first_day AND end_date >= :last_day)
+            )
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+
+        $stmt->bindParam(':month', $currentMonth);
+        $stmt->bindParam(':year', $currentYear);
+        $stmt->bindParam(':first_day', $firstDay);
+        $stmt->bindParam(':last_day', $lastDay);
+        $stmt->execute();
+
+        $period = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // If no period found for current month, get the most recent period
+        if (!$period) {
+            $stmt = $pdo->prepare("
+                SELECT
+                    id,
+                    period_code,
+                    period_name as name,
+                    start_date,
+                    end_date,
+                    pay_date,
+                    status,
+                    total_gross,
+                    total_deductions,
+                    total_net,
+                    created_at,
+                    updated_at
+                FROM payroll_periods
+                ORDER BY created_at DESC
+                LIMIT 1
+            ");
+            $stmt->execute();
+            $period = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($period) {
+            // Format status for display
+            if ($period['status'] === 'Draft') {
+                $period['status'] = 'Processing';
+            } elseif ($period['status'] === 'Paid') {
+                $period['status'] = 'Completed';
+            }
+
+            echo json_encode([
+                'success' => true,
+                'data' => $period
+            ]);
+        } else {
+            // No periods exist at all
+            echo json_encode([
+                'success' => true,
+                'data' => null,
+                'message' => 'No payroll periods found'
+            ]);
+        }
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
