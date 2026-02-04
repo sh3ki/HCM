@@ -448,8 +448,7 @@ async function editCompensation(id) {
 document.addEventListener("DOMContentLoaded", loadCompensations);
 </script>
 
-
-
-
+    <!-- Include global scripts for header dropdown functionality -->
+    <?php include 'includes/scripts.php'; ?>
 </body>
 </html>
