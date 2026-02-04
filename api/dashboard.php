@@ -134,51 +134,32 @@ function handleGetStats($pdo, $user_id) {
             error_log("Total employees error: " . $e->getMessage());
         }
 
-        // Get current month payroll total - from current period's gross pay
+        // Get Total Gross Pay from the LATEST payroll period (exactly like Payroll Management)
+        $monthlyPayroll = 0;
         try {
-            // First, try to get the current month's payroll period
-            $currentMonth = date('m');
-            $currentYear = date('Y');
-            $firstDay = date('Y-m-01');
-            $lastDay = date('Y-m-t');
-
-            $periodStmt = $pdo->prepare("
-                SELECT id, total_gross
+            // Get the most recent payroll period (same as Payroll Management page)
+            $periodStmt = $pdo->query("
+                SELECT id
                 FROM payroll_periods
-                WHERE (
-                    (MONTH(start_date) = :month AND YEAR(start_date) = :year)
-                    OR (MONTH(end_date) = :month AND YEAR(end_date) = :year)
-                    OR (start_date <= :first_day AND end_date >= :last_day)
-                )
                 ORDER BY created_at DESC
                 LIMIT 1
             ");
-            $periodStmt->bindParam(':month', $currentMonth);
-            $periodStmt->bindParam(':year', $currentYear);
-            $periodStmt->bindParam(':first_day', $firstDay);
-            $periodStmt->bindParam(':last_day', $lastDay);
-            $periodStmt->execute();
-            $currentPeriod = $periodStmt->fetch(PDO::FETCH_ASSOC);
+            $latestPeriod = $periodStmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($currentPeriod && $currentPeriod['id']) {
-                // Get total gross pay from payroll_records for this period
+            if ($latestPeriod && $latestPeriod['id']) {
+                // Get Total Gross Pay from payroll_records for the latest period
+                // This matches exactly what Payroll Management page shows
                 $payrollStmt = $pdo->prepare("
-                    SELECT COALESCE(SUM(pr.gross_pay), 0) as monthly_payroll
+                    SELECT COALESCE(SUM(pr.gross_pay), 0) as total_gross
                     FROM payroll_records pr
                     JOIN employees e ON pr.employee_id = e.id
                     WHERE pr.payroll_period_id = :period_id AND e.employment_status = 'Active'
                 ");
-                $payrollStmt->bindParam(':period_id', $currentPeriod['id']);
+                $payrollStmt->bindParam(':period_id', $latestPeriod['id']);
                 $payrollStmt->execute();
                 $monthlyPayroll = (float)$payrollStmt->fetchColumn();
-
-                // If no records yet but period has total_gross set, use that
-                if ($monthlyPayroll == 0 && isset($currentPeriod['total_gross']) && $currentPeriod['total_gross'] > 0) {
-                    $monthlyPayroll = (float)$currentPeriod['total_gross'];
-                }
-                // Otherwise monthlyPayroll stays 0, matching the Payroll Management page
             }
-            // If no period found for current month, monthlyPayroll stays 0
+            // If no period found, monthlyPayroll stays 0
         } catch (PDOException $e) {
             error_log("Payroll error: " . $e->getMessage());
             // No fallback - if payroll_periods table doesn't exist or query fails, show ₱0.00
