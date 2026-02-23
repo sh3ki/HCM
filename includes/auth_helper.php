@@ -4,6 +4,8 @@
  * Provides utility functions for API-based authentication
  */
 
+require_once __DIR__ . '/../config/app.php';
+
 /**
  * Check if user is authenticated via session
  */
@@ -43,7 +45,7 @@ function validateAndRefreshToken() {
 
     // Make API call to validate token
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/HCM/api/auth.php/validate");
+    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/validate'));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $_SESSION['access_token']
     ]);
@@ -77,7 +79,7 @@ function refreshAccessToken() {
     $data = ['refresh_token' => $_SESSION['refresh_token']];
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/HCM/api/auth.php/refresh");
+    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/refresh'));
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
