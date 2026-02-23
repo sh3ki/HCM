@@ -1,4 +1,6 @@
+<?php require_once __DIR__ . '/../../config/app.php'; ?>
 <script>
+const HCM_API_BASE = '<?php echo htmlspecialchars(app_path('api'), ENT_QUOTES, 'UTF-8'); ?>';
 // Toggle sidebar
 document.getElementById('toggleSidebar').addEventListener('click', function() {
     document.getElementById('sidebar').classList.toggle('-translate-x-full');
@@ -69,7 +71,7 @@ function closeModal(modalId) {
             confirmBtn.disabled = true;
             confirmBtn.textContent = 'Changing...';
 
-            const response = await fetch('/HCM/api/change_password.php?action=change', {
+            const response = await fetch(`${HCM_API_BASE}/change_password.php?action=change`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword })
@@ -104,7 +106,7 @@ function closeModal(modalId) {
             skipBtn.disabled = true;
             skipBtn.textContent = 'Skipping...';
 
-            const response = await fetch('/HCM/api/change_password.php?action=skip', {
+            const response = await fetch(`${HCM_API_BASE}/change_password.php?action=skip`, {
                 method: 'POST'
             });
 
@@ -167,7 +169,7 @@ function closeModal(modalId) {
         resendBtn.classList.add('opacity-60');
 
         try {
-            const response = await fetch('/HCM/api/otp.php?action=send', { method: 'POST' });
+            const response = await fetch(`${HCM_API_BASE}/otp.php?action=send`, { method: 'POST' });
             
             if (!response.ok) {
                 console.error('OTP API HTTP error:', response.status, response.statusText);
@@ -207,7 +209,7 @@ function closeModal(modalId) {
         }
 
         try {
-            const response = await fetch('/HCM/api/otp.php?action=verify', {
+            const response = await fetch(`${HCM_API_BASE}/otp.php?action=verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ otp })
