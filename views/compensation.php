@@ -262,7 +262,7 @@ document.addEventListener("click", (event) => {
 });
 
 
-const apiUrl = "http://localhost/HCM/api/compensation_planning.php"; // adjust path if needed
+const apiUrl = "<?php echo htmlspecialchars(app_path('api/compensation_planning.php'), ENT_QUOTES, 'UTF-8'); ?>";
 
 
 // Fetch all compensation plans and populate table
