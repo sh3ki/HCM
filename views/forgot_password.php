@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../config/app.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
+        const HCM_API_BASE = '<?php echo htmlspecialchars(app_path('api'), ENT_QUOTES, 'UTF-8'); ?>';
+
         tailwind.config = {
             theme: {
                 extend: {
@@ -300,7 +303,7 @@
             disableButton('send-otp-btn', true);
 
             try {
-                const response = await fetch('/HCM/api/forgot_password.php?action=send', {
+                const response = await fetch(`${HCM_API_BASE}/forgot_password.php?action=send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -329,7 +332,7 @@
             disableButton('resend-btn', true);
 
             try {
-                const response = await fetch('/HCM/api/forgot_password.php?action=send', {
+                const response = await fetch(`${HCM_API_BASE}/forgot_password.php?action=send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email })
@@ -362,7 +365,7 @@
             disableButton('verify-otp-btn', true);
 
             try {
-                const response = await fetch('/HCM/api/forgot_password.php?action=verify', {
+                const response = await fetch(`${HCM_API_BASE}/forgot_password.php?action=verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ otp })
@@ -401,7 +404,7 @@
             disableButton('reset-password-btn', true);
 
             try {
-                const response = await fetch('/HCM/api/forgot_password.php?action=reset', {
+                const response = await fetch(`${HCM_API_BASE}/forgot_password.php?action=reset`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password, confirm_password: confirmPassword })
