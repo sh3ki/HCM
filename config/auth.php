@@ -27,7 +27,15 @@ define('API_RATE_LIMIT', 100); // requests per hour
 define('API_RATE_WINDOW', 3600); // 1 hour
 
 // CORS Settings
-define('CORS_ALLOWED_ORIGINS', ['http://localhost:3000', 'http://127.0.0.1:3000']);
+$corsAllowedOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+$currentHost = $_SERVER['HTTP_HOST'] ?? '';
+
+if (!empty($currentHost)) {
+    $corsAllowedOrigins[] = 'http://' . $currentHost;
+    $corsAllowedOrigins[] = 'https://' . $currentHost;
+}
+
+define('CORS_ALLOWED_ORIGINS', array_values(array_unique($corsAllowedOrigins)));
 define('CORS_ALLOWED_METHODS', ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']);
 define('CORS_ALLOWED_HEADERS', ['Content-Type', 'Authorization', 'X-Requested-With']);
 
