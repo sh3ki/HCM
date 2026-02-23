@@ -5,6 +5,7 @@ session_start();
 
 // Include auth helper
 require_once __DIR__ . '/../includes/auth_helper.php';
+require_once __DIR__ . '/../config/app.php';
 
 // If already authenticated, redirect to appropriate page
 if (isAuthenticated()) {
@@ -33,7 +34,7 @@ if ($_POST) {
 
     // Make API call to login endpoint
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/HCM/api/auth.php/login");
+    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/login'));
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
