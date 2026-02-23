@@ -1131,15 +1131,16 @@ function deletePayrollRecord($input) {
 // Helper function to get database connection
 function getDbConnection() {
     try {
-        $host = 'localhost';
-        $dbname = 'hcm_system';
-        $username = 'root';
-        $password = '';
+        global $pdo;
 
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        if (!isset($pdo) || !($pdo instanceof PDO)) {
+            throw new Exception('Database connection is not available');
+        }
+
         return $pdo;
     } catch (PDOException $e) {
+        throw new Exception('Database connection failed: ' . $e->getMessage());
+    } catch (Exception $e) {
         throw new Exception('Database connection failed: ' . $e->getMessage());
     }
 }
