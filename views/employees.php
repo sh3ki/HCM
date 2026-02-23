@@ -11,6 +11,7 @@ header("Last-Modified: " . gmdate('D, d M Y H:i:s') . " GMT");
 
 // Include database connection
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/app.php';
 
 try {
     // Fetch employee data from database with department and position information
@@ -899,7 +900,7 @@ if ($_POST) {
             messageEl.className = 'hidden text-sm mt-2';
             
             try {
-                const response = await fetch('/HCM/api/employees.php', {
+                const response = await fetch('<?php echo htmlspecialchars(app_path('api/employees.php'), ENT_QUOTES, 'UTF-8'); ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
