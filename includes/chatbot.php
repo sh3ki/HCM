@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../config/app.php'; ?>
 <!-- HCM System Chatbot -->
 <div id="hcm-chatbot" class="fixed bottom-6 right-6 z-50">
     <!-- Chat Toggle Button -->
@@ -128,6 +129,8 @@
 </style>
 
 <script>
+const CHATBOT_API_URL = '<?php echo htmlspecialchars(app_path('api/chatbot.php'), ENT_QUOTES, 'UTF-8'); ?>';
+
 class HCMChatbot {
     constructor() {
         this.isOpen = false;
@@ -204,7 +207,7 @@ class HCMChatbot {
 
         try {
             // Send to API
-            const response = await fetch('/HCM/api/chatbot.php', {
+            const response = await fetch(CHATBOT_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
