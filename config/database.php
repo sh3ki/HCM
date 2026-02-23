@@ -1,11 +1,49 @@
 <?php
 // Database Configuration for HCM System
-// Environment: Development
+// Environment: Dynamic (supports localhost and live hosting)
 
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'hcm_system');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+if (!function_exists('db_env')) {
+    function db_env($key, $default = null) {
+        $value = getenv($key);
+
+        if ($value === false && isset($_ENV[$key])) {
+            $value = $_ENV[$key];
+        }
+
+        if ($value === false && isset($_SERVER[$key])) {
+            $value = $_SERVER[$key];
+        }
+
+        if ($value === false || $value === null || $value === '') {
+            return $default;
+        }
+
+        return $value;
+    }
+}
+
+$rawHost = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? db_env('APP_HOST', 'localhost'))));
+
+if (strpos($rawHost, '://') !== false) {
+    $parsed = parse_url($rawHost);
+    $rawHost = strtolower((string) ($parsed['host'] ?? $rawHost));
+}
+
+$currentHost = preg_replace('/:\\d+$/', '', $rawHost);
+
+$isLocalhost = in_array($currentHost, ['localhost', '127.0.0.1', '::1'], true)
+    || str_ends_with($currentHost, '.local')
+    || str_ends_with($currentHost, '.test');
+
+$defaultDbHost = 'localhost';
+$defaultDbName = $isLocalhost ? 'hcm_system' : 'hr4_hcm_system';
+$defaultDbUser = $isLocalhost ? 'root' : 'hr4_hcm';
+$defaultDbPass = $isLocalhost ? '' : 'hcm123';
+
+define('DB_HOST', db_env('DB_HOST', $defaultDbHost));
+define('DB_NAME', db_env('DB_NAME', $defaultDbName));
+define('DB_USER', db_env('DB_USER', $defaultDbUser));
+define('DB_PASS', db_env('DB_PASS', $defaultDbPass));
 define('DB_CHARSET', 'utf8mb4');
 
 // Database connection options
