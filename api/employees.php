@@ -418,6 +418,9 @@ function handleCreateEmployee($pdo) {
 
 function sendCredentialsEmail($email, $firstName, $username, $password) {
     require_once __DIR__ . '/../includes/otp_mailer.php';
+    require_once __DIR__ . '/../config/app.php';
+
+    $loginUrl = app_url('views/login.php');
     
     $subject = "Welcome to HCM System - Your Login Credentials";
     $htmlBody = "
@@ -443,7 +446,7 @@ function sendCredentialsEmail($email, $firstName, $username, $password) {
                 <div class='credentials'>
                     <p><strong>Username:</strong> " . htmlspecialchars($username) . "</p>
                     <p><strong>Temporary Password:</strong> " . htmlspecialchars($password) . "</p>
-                    <p><strong>Login URL:</strong> <a href='http://localhost/HCM/views/login.php'>Click here to login</a></p>
+                    <p><strong>Login URL:</strong> <a href='" . htmlspecialchars($loginUrl) . "'>Click here to login</a></p>
                 </div>
                 <p><strong>Important:</strong></p>
                 <ul>
