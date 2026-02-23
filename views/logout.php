@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/app.php';
 
 // Check if user is authenticated and has tokens
 if (isset($_SESSION['access_token'])) {
@@ -10,7 +11,7 @@ if (isset($_SESSION['access_token'])) {
 
     // Make API call to logout endpoint
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/HCM/api/auth/logout");
+    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/logout'));
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
