@@ -3,10 +3,6 @@
 require_once __DIR__ . '/../includes/auth_helper.php';
 requireAuth();
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 // Get employee ID from URL parameter
 $employee_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
