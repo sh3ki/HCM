@@ -5,6 +5,12 @@
  */
 
 require_once __DIR__ . '/../config/app.php';
+// Include Database class and run config/database.php at global scope so that
+// $pdo is available globally in every view that includes this file.
+require_once __DIR__ . '/Database.php';
+if (!isset($pdo) || $pdo === null) {
+    require_once __DIR__ . '/../config/database.php';
+}
 
 /**
  * Check if user is authenticated via session
@@ -28,6 +34,7 @@ function getCurrentUser() {
         'email' => $_SESSION['email'] ?? null,
         'employee_email' => $_SESSION['employee_email'] ?? null,
         'role' => $_SESSION['role'] ?? null,
+        'role_id' => isset($_SESSION['role_id']) ? (int) $_SESSION['role_id'] : null,
         'first_name' => $_SESSION['first_name'] ?? null,
         'last_name' => $_SESSION['last_name'] ?? null,
         'access_token' => $_SESSION['access_token'] ?? null,
@@ -43,18 +50,54 @@ function validateAndRefreshToken() {
         return false;
     }
 
-    // Make API call to validate token
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/validate'));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Bearer ' . $_SESSION['access_token']
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    // Validate locally first to avoid internal HTTP routing issues on some hosts
+    try {
+        require_once __DIR__ . '/Database.php';
+        require_once __DIR__ . '/JWT.php';
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        $db = Database::getInstance();
+        $authManager = new AuthManager($db);
+        $token = $_SESSION['access_token'] ?? '';
+
+        if (!empty($token)) {
+            $validation = $authManager->validateToken($token);
+            if (!empty($validation['valid'])) {
+                return true;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Local token validation failed: ' . $e->getMessage());
+    }
+
+    // Make API call to validate token (with fallback URL formats)
+    $authEndpoints = function_exists('api_url_candidates')
+        ? api_url_candidates('auth.php?action=validate', ['auth/validate', 'auth.php/validate'])
+        : [
+            api_url('auth.php?action=validate'),
+            api_url('auth/validate'),
+            api_url('auth.php/validate')
+        ];
+
+    $response = false;
+    $httpCode = 0;
+
+    foreach ($authEndpoints as $endpointUrl) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $endpointUrl);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $_SESSION['access_token']
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response !== false && $httpCode !== 404) {
+            break;
+        }
+    }
 
     if ($httpCode === 200) {
         return true;
@@ -78,19 +121,53 @@ function refreshAccessToken() {
 
     $data = ['refresh_token' => $_SESSION['refresh_token']];
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/refresh'));
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    // Try local refresh first
+    try {
+        require_once __DIR__ . '/Database.php';
+        require_once __DIR__ . '/JWT.php';
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        $db = Database::getInstance();
+        $authManager = new AuthManager($db);
+        $localRefresh = $authManager->refreshToken($_SESSION['refresh_token']);
+
+        if (!empty($localRefresh['access_token'])) {
+            $_SESSION['access_token'] = $localRefresh['access_token'];
+            return true;
+        }
+    } catch (Exception $e) {
+        error_log('Local token refresh failed: ' . $e->getMessage());
+    }
+
+    $authEndpoints = function_exists('api_url_candidates')
+        ? api_url_candidates('auth.php?action=refresh', ['auth/refresh', 'auth.php/refresh'])
+        : [
+            api_url('auth.php?action=refresh'),
+            api_url('auth/refresh'),
+            api_url('auth.php/refresh')
+        ];
+
+    $response = false;
+    $httpCode = 0;
+
+    foreach ($authEndpoints as $endpointUrl) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $endpointUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response !== false && $httpCode !== 404) {
+            break;
+        }
+    }
 
     if ($httpCode === 200) {
         // Extract JSON from response (in case there are PHP warnings before JSON)
