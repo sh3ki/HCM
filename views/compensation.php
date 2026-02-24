@@ -148,11 +148,13 @@ requireAuth();
 <select id="employee" name="employee_id" required class="w-full border rounded-lg p-2">
     <option value="">Select Employee</option>
     <?php
-    require_once __DIR__ . '/../config/database.php';
-    $stmt = $pdo->query("SELECT id, first_name, last_name FROM employees ORDER BY first_name");
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        echo "<option value='{$row['id']}'>{$row['first_name']} {$row['last_name']}</option>";
-    }
+    // $pdo is guaranteed in global scope via auth_helper.php
+    try {
+        $emp_list_stmt = $pdo->query("SELECT id, first_name, last_name FROM employees WHERE employment_status = 'Active' ORDER BY first_name");
+        while ($row = $emp_list_stmt->fetch(PDO::FETCH_ASSOC)) {
+            echo "<option value='" . htmlspecialchars($row['id']) . "'>" . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . "</option>";
+        }
+    } catch (Exception $e) { /* DB not ready */ }
     ?>
 </select>
 
@@ -163,11 +165,13 @@ requireAuth();
         class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-primary focus:border-primary">
         <option value="">Select Position</option>
         <?php
-        $stmt = $pdo->query("SELECT position_title FROM positions ORDER BY position_title");
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $title = htmlspecialchars($row['position_title']);
-            echo "<option value='{$title}'>{$title}</option>";
-        }
+        try {
+            $pos_list_stmt = $pdo->query("SELECT position_title FROM positions ORDER BY position_title");
+            while ($row = $pos_list_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $title = htmlspecialchars($row['position_title']);
+                echo "<option value='{$title}'>{$title}</option>";
+            }
+        } catch (Exception $e) { /* DB not ready */ }
         ?>
     </select>
 </div>
@@ -262,7 +266,7 @@ document.addEventListener("click", (event) => {
 });
 
 
-const apiUrl = "<?php echo htmlspecialchars(app_path('api/compensation_planning.php'), ENT_QUOTES, 'UTF-8'); ?>";
+const apiUrl = "../api/compensation_planning.php";
 
 
 // Fetch all compensation plans and populate table
