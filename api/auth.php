@@ -16,17 +16,25 @@ try {
     $method = RequestHelper::getMethod();
     $path = RequestHelper::getPath();
     $pathParts = explode('/', trim($path, '/'));
+    $queryAction = strtolower(trim((string) ($_GET['action'] ?? '')));
+    $pathAction = strtolower(trim((string) end($pathParts)));
+
+    if ($pathAction === 'auth.php' || $pathAction === 'auth') {
+        $pathAction = '';
+    }
+
+    $targetAction = $queryAction !== '' ? $queryAction : $pathAction;
 
     // Route the request
     switch ($method) {
         case 'POST':
-            if (end($pathParts) === 'login') {
+            if ($targetAction === 'login') {
                 handleLogin($middleware, $auth);
-            } elseif (end($pathParts) === 'logout') {
+            } elseif ($targetAction === 'logout') {
                 handleLogout($middleware, $auth);
-            } elseif (end($pathParts) === 'refresh') {
+            } elseif ($targetAction === 'refresh') {
                 handleRefreshToken($middleware, $auth);
-            } elseif (end($pathParts) === 'change-password') {
+            } elseif ($targetAction === 'change-password') {
                 handleChangePassword($middleware, $auth);
             } else {
                 ApiResponse::notFound('Authentication endpoint not found');
@@ -34,9 +42,9 @@ try {
             break;
 
         case 'GET':
-            if (end($pathParts) === 'me') {
+            if ($targetAction === 'me') {
                 handleGetProfile($middleware, $auth);
-            } elseif (end($pathParts) === 'validate') {
+            } elseif ($targetAction === 'validate') {
                 handleValidateToken($middleware, $auth);
             } else {
                 ApiResponse::notFound('Authentication endpoint not found');
@@ -57,7 +65,7 @@ try {
 }
 
 function handleLogin($middleware, $auth) {
-    $data = RequestHelper::getJsonInput();
+    $data = getAuthInput();
 
     // Validate input
     $rules = [
@@ -91,7 +99,7 @@ function handleLogin($middleware, $auth) {
 }
 
 function handleLogout($middleware, $auth) {
-    $data = RequestHelper::getJsonInput();
+    $data = getAuthInput();
     $user = $middleware->authenticate(false); // Optional authentication
 
     try {
@@ -108,7 +116,7 @@ function handleLogout($middleware, $auth) {
 }
 
 function handleRefreshToken($middleware, $auth) {
-    $data = RequestHelper::getJsonInput();
+    $data = getAuthInput();
 
     // Validate input
     $rules = [
@@ -131,7 +139,7 @@ function handleRefreshToken($middleware, $auth) {
 
 function handleChangePassword($middleware, $auth) {
     $user = $middleware->authenticate();
-    $data = RequestHelper::getJsonInput();
+    $data = getAuthInput();
 
     // Validate input
     $rules = [
@@ -203,5 +211,37 @@ function handleValidateToken($middleware, $auth) {
         'valid' => true,
         'user' => $user
     ], 'Token is valid');
+}
+
+function getAuthInput() {
+    $data = RequestHelper::getJsonInput();
+
+    if (is_array($data) && !empty($data)) {
+        return $data;
+    }
+
+    if (!empty($_POST)) {
+        return $_POST;
+    }
+
+    $allowed = [
+        'username',
+        'password',
+        'remember_me',
+        'refresh_token',
+        'current_password',
+        'new_password',
+        'confirm_password',
+        'session_id'
+    ];
+
+    $fallback = [];
+    foreach ($allowed as $key) {
+        if (isset($_GET[$key])) {
+            $fallback[$key] = $_GET[$key];
+        }
+    }
+
+    return $fallback;
 }
 ?>
