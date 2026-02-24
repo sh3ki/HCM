@@ -1,6 +1,6 @@
 <?php require_once __DIR__ . '/../../config/app.php'; ?>
 <script>
-const HCM_API_BASE = '<?php echo htmlspecialchars(app_path('api'), ENT_QUOTES, 'UTF-8'); ?>';
+const HCM_API_BASE = '../api';
 // Toggle sidebar
 document.getElementById('toggleSidebar').addEventListener('click', function() {
     document.getElementById('sidebar').classList.toggle('-translate-x-full');
