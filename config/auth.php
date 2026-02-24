@@ -2,7 +2,9 @@
 // Authentication Configuration for HCM System
 
 // JWT Configuration
-define('JWT_SECRET', 'your-super-secret-jwt-key-change-in-production');
+// IMPORTANT: Change this to a unique random string per deployment (min 32 chars).
+// Generate one with: php -r "echo bin2hex(random_bytes(32));" or set via JWT_SECRET env var.
+define('JWT_SECRET', getenv('JWT_SECRET') ?: 'Hcm$yst3m!Pr0d-S3cr3t#2026@lumino-ph.com');
 define('JWT_ALGORITHM', 'HS256');
 define('JWT_EXPIRATION', 3600 * 24); // 24 hours
 define('JWT_REFRESH_EXPIRATION', 3600 * 24 * 7); // 7 days
