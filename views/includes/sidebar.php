@@ -4,9 +4,15 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 
 // Get user role to determine which menu items to show
 $currentUser = getCurrentUser();
-$userRole = 'employee'; // default
+$userRole = strtolower((string) ($currentUser['role'] ?? 'employee'));
+$roleId = isset($currentUser['role_id']) ? (int) $currentUser['role_id'] : (int) ($_SESSION['role_id'] ?? 0);
 
-if ($currentUser && isset($currentUser['id'])) {
+// Primary role source: session role_id (1 = admin)
+if ($roleId === 1) {
+    $userRole = 'admin';
+}
+
+if ($currentUser && isset($currentUser['id']) && $roleId !== 1) {
     try {
         require_once __DIR__ . '/../../config/database.php';
         global $conn;
@@ -20,7 +26,10 @@ if ($currentUser && isset($currentUser['id'])) {
             ");
             $stmt->execute([$currentUser['id']]);
             $result = $stmt->fetch();
-            $userRole = strtolower($result['role_name'] ?? 'employee');
+            $dbRole = strtolower((string) ($result['role_name'] ?? 'employee'));
+            if (!empty($dbRole)) {
+                $userRole = $dbRole;
+            }
             $permissions = json_decode($result['permissions'] ?? '[]', true);
         }
     } catch (Exception $e) {
@@ -29,7 +38,7 @@ if ($currentUser && isset($currentUser['id'])) {
 }
 
 // Determine if user is employee (only has limited permissions)
-$isEmployee = ($userRole === 'employee');
+$isEmployee = !($roleId === 1 || in_array($userRole, ['admin', 'super admin', 'hr', 'hr manager', 'hr staff'], true));
 ?>
 <aside id="sidebar" class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0">
     <div class="h-full px-3 pb-4 overflow-y-auto bg-white">
@@ -107,16 +116,6 @@ $isEmployee = ($userRole === 'employee');
                     </a>
                 </li>
 
-                <?php 
-                // Check if user is admin to show Admin Management link
-                if ($currentUser && isset($currentUser['role']) && strtolower($currentUser['role']) === 'admin'): ?>
-                <li>
-                    <a href="admin.php" class="flex items-center p-2 rounded-lg group <?php echo ($currentPage == 'admin') ? 'text-white bg-primary' : 'text-gray-900 hover:bg-gray-100'; ?>">
-                        <i class="fas fa-user-shield w-5 h-5 <?php echo ($currentPage == 'admin') ? 'text-white' : 'text-gray-500 group-hover:text-gray-900'; ?>"></i>
-                        <span class="ml-3">Admin Management</span>
-                    </a>
-                </li>
-                <?php endif; ?>
             <?php endif; ?>
 
             <!-- Settings -->
@@ -124,7 +123,10 @@ $isEmployee = ($userRole === 'employee');
             $currentUser = getCurrentUser();
             $showSettings = false;
 
-            if ($currentUser && isset($currentUser['id'])) {
+            // Admin (role_id=1) always sees Settings without a DB round-trip
+            if ($roleId === 1) {
+                $showSettings = true;
+            } elseif ($currentUser && isset($currentUser['id'])) {
                 try {
                     require_once __DIR__ . '/../../config/database.php';
                     global $conn;
@@ -138,9 +140,9 @@ $isEmployee = ($userRole === 'employee');
                         ");
                         $stmt->execute([$currentUser['id']]);
                         $result = $stmt->fetch();
-                        $userRole = $result['role_name'] ?? 'employee';
+                        $dbRoleName = strtolower((string) ($result['role_name'] ?? 'employee'));
 
-                        $showSettings = in_array(strtolower($userRole), ['admin', 'hr', 'super admin', 'hr manager', 'hr staff']);
+                        $showSettings = in_array($dbRoleName, ['admin', 'hr', 'super admin', 'hr manager', 'hr staff']);
                     }
                 } catch (Exception $e) {
                     error_log("Settings menu error: " . $e->getMessage());
