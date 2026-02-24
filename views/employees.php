@@ -900,7 +900,7 @@ if ($_POST) {
             messageEl.className = 'hidden text-sm mt-2';
             
             try {
-                const response = await fetch('<?php echo htmlspecialchars(app_path('api/employees.php'), ENT_QUOTES, 'UTF-8'); ?>', {
+                const response = await fetch('../api/employees.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
