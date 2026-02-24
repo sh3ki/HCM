@@ -479,12 +479,7 @@ function updateDependent($conn, $user_id, $input) {
 
         $stmt->execute();
 
-        if ($stmt->rowCount() === 0) {
-            ApiResponse::error('No changes made or dependent not found', 404);
-            return;
-        }
-
-        // Get the updated dependent
+        // Get the updated dependent (even if no fields changed)
         getDependentById($conn, $user_id, $dependent_id);
     } catch (Exception $e) {
         ApiResponse::error('Error updating dependent: ' . $e->getMessage(), 500);
