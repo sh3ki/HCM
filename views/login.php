@@ -3,24 +3,77 @@
 ob_start();
 session_start();
 
-// Include auth helper
-require_once __DIR__ . '/../includes/auth_helper.php';
-require_once __DIR__ . '/../config/app.php';
+if (!function_exists('findProjectRoot')) {
+    function findProjectRoot() {
+        $documentRoot = rtrim(str_replace('\\', '/', (string) ($_SERVER['DOCUMENT_ROOT'] ?? '')), '/');
+        $scriptRoot = dirname(__DIR__);
+        $candidates = [
+            $scriptRoot,
+            dirname($scriptRoot),
+            $documentRoot,
+            $documentRoot . '/HCM'
+        ];
 
-// If already authenticated, redirect to appropriate page
-if (isAuthenticated()) {
-    $roleId = intval($_SESSION['role_id'] ?? 1); // Default to admin if not set
-    if ($roleId !== 1) { // If not admin (role_id 1), redirect to employee payslip
+        $checked = [];
+
+        foreach ($candidates as $root) {
+            $root = rtrim(str_replace('\\', '/', (string) $root), '/');
+            if ($root === '' || isset($checked[$root])) {
+                continue;
+            }
+
+            $checked[$root] = true;
+
+            $hasIncludes = @is_file($root . '/includes/auth_helper.php');
+            $hasConfig = @is_file($root . '/config/app.php');
+            $hasViews = @is_dir($root . '/views');
+
+            if ($hasIncludes && $hasConfig && $hasViews) {
+                return $root;
+            }
+        }
+
+        return null;
+    }
+}
+
+$projectRoot = findProjectRoot();
+
+if ($projectRoot === null) {
+    http_response_code(500);
+    die('Deployment error: could not locate project root. Ensure includes/, config/, and views/ are in the same folder.');
+}
+
+require_once $projectRoot . '/includes/auth_helper.php';
+require_once $projectRoot . '/config/app.php';
+require_once $projectRoot . '/includes/Database.php';
+require_once $projectRoot . '/includes/JWT.php';
+
+if (!function_exists('redirectByRoleId')) {
+    function redirectByRoleId($roleId) {
+        if ((int) $roleId === 1) {
+            header('Location: index.php');
+            exit();
+        }
+
         header('Location: employee_payslip.php');
-        exit();
-    } else {
-        header('Location: index.php');
         exit();
     }
 }
 
+// If already authenticated, redirect to appropriate page
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isAuthenticated()) {
+    $roleId = intval($_SESSION['role_id'] ?? 1); // Default to admin if not set
+    redirectByRoleId($roleId);
+}
+
 // Handle login form submission
 if ($_POST) {
+    // If relogging while an old session exists, clear it and proceed with new credentials
+    if (isAuthenticated()) {
+        session_unset();
+    }
+
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     $remember_me = isset($_POST['remember-me']);
@@ -32,21 +85,39 @@ if ($_POST) {
         'remember_me' => $remember_me
     ];
 
-    // Make API call to login endpoint
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, api_url('auth.php/login'));
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    // Make API call to login endpoint (with fallback URL formats)
+    $authEndpoints = function_exists('api_url_candidates')
+        ? api_url_candidates('auth.php?action=login', ['auth/login', 'auth.php/login'])
+        : [
+            api_url('auth.php?action=login'),
+            api_url('auth/login'),
+            api_url('auth.php/login')
+        ];
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
+    $response = false;
+    $httpCode = 0;
+    $curlError = '';
+
+    foreach ($authEndpoints as $endpointUrl) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $endpointUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response !== false && $httpCode !== 404) {
+            break;
+        }
+    }
 
     // Debug logging
     error_log("Login attempt - HTTP Code: $httpCode");
@@ -65,10 +136,37 @@ if ($_POST) {
             $responseData = json_decode($response, true);
         }
 
+        if ($httpCode === 404 || !$responseData) {
+            try {
+                $db = Database::getInstance();
+                $authManager = new AuthManager($db);
+                $localResult = $authManager->login($username, $password, $remember_me);
+
+                $responseData = [
+                    'success' => true,
+                    'data' => $localResult
+                ];
+                $httpCode = 200;
+            } catch (Exception $localAuthError) {
+                if ($httpCode === 404) {
+                    $responseData = [
+                        'success' => false,
+                        'message' => $localAuthError->getMessage()
+                    ];
+                    $httpCode = 401;
+                }
+            }
+        }
+
         if ($httpCode === 200 && $responseData && isset($responseData['success']) && $responseData['success']) {
             // Store authentication data in session
+            $sessionRoleId = (int) ($responseData['data']['user']['role_id'] ?? 0);
+            if ($sessionRoleId <= 0 && isset($responseData['data']['user']['role'])) {
+                $sessionRoleId = (strtolower((string) $responseData['data']['user']['role']) === 'super admin' || strtolower((string) $responseData['data']['user']['role']) === 'admin') ? 1 : 2;
+            }
+
             $_SESSION['user_id'] = $responseData['data']['user']['id'] ?? null;
-            $_SESSION['role_id'] = $responseData['data']['user']['role_id'] ?? 1; // Store role_id
+            $_SESSION['role_id'] = $sessionRoleId > 0 ? $sessionRoleId : 1; // Store normalized role_id
             $_SESSION['employee_id'] = $responseData['data']['user']['employee_id'] ?? null;
             $_SESSION['is_new'] = $responseData['data']['user']['is_new'] ?? 0;
             $_SESSION['auto_password_changed'] = $responseData['data']['user']['auto_password_changed'] ?? 0;
@@ -85,16 +183,9 @@ if ($_POST) {
 
             // Clear any output buffer before redirect
             ob_end_clean();
-            
+
             // Redirect based on role_id (1 = Admin, all others = Employee)
-            $roleId = intval($_SESSION['role_id'] ?? 1);
-            if ($roleId !== 1) {
-                header('Location: employee_payslip.php');
-                exit();
-            } else {
-                header('Location: index.php');
-                exit();
-            }
+            redirectByRoleId($_SESSION['role_id'] ?? 1);
         } else {
             // Handle various error scenarios
             if ($responseData && isset($responseData['message'])) {
