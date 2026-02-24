@@ -129,7 +129,7 @@
 </style>
 
 <script>
-const CHATBOT_API_URL = '<?php echo htmlspecialchars(app_path('api/chatbot.php'), ENT_QUOTES, 'UTF-8'); ?>';
+const CHATBOT_API_URL = '../api/chatbot.php';
 
 class HCMChatbot {
     constructor() {
