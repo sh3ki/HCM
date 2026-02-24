@@ -3,9 +3,11 @@
 require_once __DIR__ . '/../includes/auth_helper.php';
 requireAuth();
 
-// Check if user is admin
+// Check if user is admin — use role_id (1) as primary check, role name as fallback
 $currentUser = getCurrentUser();
-if (!$currentUser || !isset($currentUser['role']) || strtolower($currentUser['role']) !== 'admin') {
+$adminRoleId  = intval($currentUser['role_id'] ?? 0);
+$adminRoleName = strtolower((string) ($currentUser['role'] ?? ''));
+if (!$currentUser || ($adminRoleId !== 1 && !in_array($adminRoleName, ['admin', 'super admin'], true))) {
     header('Location: index.php');
     exit();
 }
