@@ -1,0 +1,27 @@
+Options -Indexes
+
+RewriteEngine On
+
+# ─── Force HTTPS on live server (skip localhost / 127.0.0.1) ───────────────
+RewriteCond %{HTTP_HOST} !^localhost [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ─── Block direct access to sensitive directories ──────────────────────────
+RewriteRule ^(config|includes|database)(/|$) - [F,L]
+
+# ─── Block access to sensitive file extensions ─────────────────────────────
+<FilesMatch "\.(sql|log|env|htpasswd|json|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ─── Security Headers ──────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
