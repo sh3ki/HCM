@@ -252,7 +252,7 @@ if ($_POST) {
                         </thead>
                         <tbody>
                             <?php foreach ($payrollRecords as $record): ?>
-                            <tr class="bg-white border-b hover:bg-gray-50">
+                            <tr class="bg-white border-b hover:bg-gray-50 cursor-pointer" onclick="viewPayslip('<?php echo htmlspecialchars($record['employee_id']); ?>')">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center">
                                         <img class="w-8 h-8 rounded-full mr-3" src="<?php echo htmlspecialchars($record['avatar']); ?>" alt="employee">
@@ -275,13 +275,13 @@ if ($_POST) {
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center space-x-2">
-                                        <button class="text-blue-600 hover:text-blue-800" title="View Payslip">
+                                        <button class="text-blue-600 hover:text-blue-800" title="View Payslip" onclick="event.stopPropagation(); viewPayslip('<?php echo htmlspecialchars($record['employee_id']); ?>')">
                                             <i class="fas fa-file-alt"></i>
                                         </button>
-                                        <button class="text-green-600 hover:text-green-800" title="Edit">
+                                        <button class="text-green-600 hover:text-green-800" title="Edit" onclick="event.stopPropagation(); editPayroll('<?php echo htmlspecialchars($record['employee_id']); ?>')">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="text-purple-600 hover:text-purple-800" title="Email Payslip">
+                                        <button class="text-purple-600 hover:text-purple-800" title="Email Payslip" onclick="event.stopPropagation(); emailPayslip('<?php echo htmlspecialchars($record['employee_id']); ?>')">
                                             <i class="fas fa-envelope"></i>
                                         </button>
                                     </div>
@@ -898,16 +898,16 @@ if ($_POST) {
         function getActionButtons(status, employeeId) {
             if (status.toLowerCase() === 'pending') {
                 return `
-                    <button onclick="approvePayrollRecord('${employeeId}')" class="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50" title="Approve">
+                    <button onclick="event.stopPropagation(); approvePayrollRecord('${employeeId}')" class="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50" title="Approve">
                         <i class="fas fa-check"></i>
                     </button>
-                    <button onclick="rejectPayrollRecord('${employeeId}')" class="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50" title="Reject">
+                    <button onclick="event.stopPropagation(); rejectPayrollRecord('${employeeId}')" class="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50" title="Reject">
                         <i class="fas fa-times"></i>
                     </button>
                 `;
             } else if (status.toLowerCase() === 'approved') {
                 return `
-                    <button onclick="markAsPaid('${employeeId}')" class="text-purple-600 hover:text-purple-800 p-1 rounded hover:bg-purple-50" title="Mark as Paid">
+                    <button onclick="event.stopPropagation(); markAsPaid('${employeeId}')" class="text-purple-600 hover:text-purple-800 p-1 rounded hover:bg-purple-50" title="Mark as Paid">
                         <i class="fas fa-money-bill"></i>
                     </button>
                 `;
@@ -920,7 +920,7 @@ if ($_POST) {
             if (!tbody) return;
 
             tbody.innerHTML = records.map(record => `
-                <tr class="bg-white border-b hover:bg-gray-50">
+                <tr class="bg-white border-b hover:bg-gray-50 cursor-pointer" onclick="viewPayslip('${record.employee_id}')">
                     <td class="px-6 py-4">
                         <div class="flex items-center">
                             <div class="w-8 h-8 rounded-full bg-gray-300 mr-3 flex items-center justify-center">
@@ -945,13 +945,13 @@ if ($_POST) {
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center space-x-2">
-                            <button onclick="viewPayslip('${record.employee_id}')" class="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50" title="View Payslip">
+                            <button onclick="event.stopPropagation(); viewPayslip('${record.employee_id}')" class="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50" title="View Payslip">
                                 <i class="fas fa-file-alt"></i>
                             </button>
-                            <button onclick="editPayroll('${record.employee_id}')" class="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50" title="Edit Salary">
+                            <button onclick="event.stopPropagation(); editPayroll('${record.employee_id}')" class="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50" title="Edit Salary">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="emailPayslip('${record.employee_id}')" class="text-purple-600 hover:text-purple-800 p-1 rounded hover:bg-purple-50" title="Email Payslip">
+                            <button onclick="event.stopPropagation(); emailPayslip('${record.employee_id}')" class="text-purple-600 hover:text-purple-800 p-1 rounded hover:bg-purple-50" title="Email Payslip">
                                 <i class="fas fa-envelope"></i>
                             </button>
                             ${getActionButtons(record.status || 'Pending', record.employee_id)}
