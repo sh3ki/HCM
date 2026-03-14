@@ -48,6 +48,75 @@ require_once $projectRoot . '/includes/auth_helper.php';
 require_once $projectRoot . '/config/app.php';
 require_once $projectRoot . '/includes/Database.php';
 require_once $projectRoot . '/includes/JWT.php';
+require_once $projectRoot . '/includes/otp_mailer.php';
+
+if (!function_exists('normalizeRoleIdFromUser')) {
+    function normalizeRoleIdFromUser(array $user): int {
+        $roleId = (int) ($user['role_id'] ?? 0);
+        if ($roleId > 0) {
+            return $roleId;
+        }
+
+        $role = strtolower((string) ($user['role'] ?? ''));
+        return ($role === 'super admin' || $role === 'admin') ? 1 : 2;
+    }
+}
+
+if (!function_exists('finalizeAuthenticatedSession')) {
+    function finalizeAuthenticatedSession(array $payload): void {
+        $user = $payload['user'] ?? [];
+        $sessionRoleId = normalizeRoleIdFromUser($user);
+
+        $_SESSION['user_id'] = $user['id'] ?? null;
+        $_SESSION['role_id'] = $sessionRoleId > 0 ? $sessionRoleId : 1;
+        $_SESSION['employee_id'] = $user['employee_id'] ?? null;
+        $_SESSION['is_new'] = $user['is_new'] ?? 0;
+        $_SESSION['auto_password_changed'] = $user['auto_password_changed'] ?? 0;
+        $_SESSION['requires_password_change'] = $user['requires_password_change'] ?? 0;
+        $_SESSION['username'] = $user['username'] ?? null;
+        $_SESSION['email'] = $user['email'] ?? null;
+        $_SESSION['employee_email'] = $user['employee_email'] ?? null;
+        $_SESSION['role'] = $user['role'] ?? null;
+        $_SESSION['first_name'] = $user['first_name'] ?? null;
+        $_SESSION['last_name'] = $user['last_name'] ?? null;
+        $_SESSION['access_token'] = $payload['access_token'] ?? null;
+        $_SESSION['refresh_token'] = $payload['refresh_token'] ?? null;
+        $_SESSION['authenticated'] = true;
+    }
+}
+
+if (!function_exists('sendAdminOtp')) {
+    function sendAdminOtp(array $user, PDO $pdo): void {
+        $userId = (int) ($user['id'] ?? 0);
+        if ($userId <= 0) {
+            throw new Exception('Unable to send OTP: missing admin user ID.');
+        }
+
+        $email = trim((string) ($user['email'] ?? ''));
+        if ($email === '') {
+            throw new Exception('Admin OTP failed: no email address is linked to this admin account.');
+        }
+
+        $fullName = trim((string) (($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+        $expiresAt = date('Y-m-d H:i:s', time() + 600);
+        $sentAt = date('Y-m-d H:i:s');
+
+        $stmt = $pdo->prepare("INSERT INTO user_otps (user_id, otp_code, otp_expires_at, otp_last_sent_at, otp_attempts, otp_verified_at, updated_at)
+            VALUES (:user_id, :otp_code, :expires_at, :sent_at, 0, NULL, :updated_at)
+            ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), otp_expires_at = VALUES(otp_expires_at), otp_last_sent_at = VALUES(otp_last_sent_at), otp_attempts = 0, otp_verified_at = NULL, updated_at = VALUES(updated_at)");
+        $stmt->execute([
+            'user_id' => $userId,
+            'otp_code' => $otpHash,
+            'expires_at' => $expiresAt,
+            'sent_at' => $sentAt,
+            'updated_at' => $sentAt
+        ]);
+
+        sendOtpEmail($email, $fullName, $otp);
+    }
+}
 
 if (!function_exists('redirectByRoleId')) {
     function redirectByRoleId($roleId) {
@@ -61,6 +130,76 @@ if (!function_exists('redirectByRoleId')) {
     }
 }
 
+$db = Database::getInstance();
+$pdo = $db->getConnection();
+$showAdminOtpForm = isset($_SESSION['pending_admin_auth']);
+
+if ($_POST && isset($_POST['back_to_login'])) {
+    unset($_SESSION['pending_admin_auth']);
+    $showAdminOtpForm = false;
+}
+
+if ($_POST && isset($_POST['verify_admin_otp'])) {
+    $pending = $_SESSION['pending_admin_auth'] ?? null;
+    if (!$pending || !isset($pending['user']['id'])) {
+        $error = 'Your admin OTP session expired. Please log in again.';
+        $showAdminOtpForm = false;
+    } else {
+        $otp = preg_replace('/\D+/', '', (string) ($_POST['admin_otp'] ?? ''));
+        if ($otp === '') {
+            $error = 'Please enter the OTP sent to your admin email.';
+            $showAdminOtpForm = true;
+        } else {
+            $stmt = $pdo->prepare('SELECT otp_code, otp_expires_at, otp_attempts FROM user_otps WHERE user_id = :user_id LIMIT 1');
+            $stmt->execute(['user_id' => (int) $pending['user']['id']]);
+            $otpRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$otpRow) {
+                $error = 'No OTP record found. Please request a new OTP.';
+                $showAdminOtpForm = true;
+            } elseif (($otpRow['otp_attempts'] ?? 0) >= 5) {
+                $error = 'Too many OTP attempts. Please request a new OTP.';
+                $showAdminOtpForm = true;
+            } elseif (!empty($otpRow['otp_expires_at']) && time() > strtotime($otpRow['otp_expires_at'])) {
+                $error = 'Your OTP has expired. Please request a new OTP.';
+                $showAdminOtpForm = true;
+            } elseif (!password_verify($otp, (string) $otpRow['otp_code'])) {
+                $stmt = $pdo->prepare('UPDATE user_otps SET otp_attempts = otp_attempts + 1, updated_at = NOW() WHERE user_id = :user_id');
+                $stmt->execute(['user_id' => (int) $pending['user']['id']]);
+                $error = 'Invalid OTP. Please try again.';
+                $showAdminOtpForm = true;
+            } else {
+                $stmt = $pdo->prepare('UPDATE user_otps SET otp_verified_at = NOW(), updated_at = NOW() WHERE user_id = :user_id');
+                $stmt->execute(['user_id' => (int) $pending['user']['id']]);
+
+                finalizeAuthenticatedSession($pending);
+                unset($_SESSION['pending_admin_auth']);
+                $showAdminOtpForm = false;
+
+                ob_end_clean();
+                redirectByRoleId($_SESSION['role_id'] ?? 1);
+            }
+        }
+    }
+}
+
+if ($_POST && isset($_POST['resend_admin_otp'])) {
+    $pending = $_SESSION['pending_admin_auth'] ?? null;
+    if (!$pending || !isset($pending['user'])) {
+        $error = 'Your admin OTP session expired. Please log in again.';
+        $showAdminOtpForm = false;
+    } else {
+        try {
+            sendAdminOtp($pending['user'], $pdo);
+            $otpNotice = 'A new OTP was sent to your admin email.';
+            $showAdminOtpForm = true;
+        } catch (Exception $e) {
+            $error = $e->getMessage();
+            $showAdminOtpForm = true;
+        }
+    }
+}
+
 // If already authenticated, redirect to appropriate page
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isAuthenticated()) {
     $roleId = intval($_SESSION['role_id'] ?? 1); // Default to admin if not set
@@ -68,15 +207,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isAuthenticated()) {
 }
 
 // Handle login form submission
-if ($_POST) {
+if ($_POST && !isset($_POST['verify_admin_otp']) && !isset($_POST['resend_admin_otp']) && !isset($_POST['back_to_login'])) {
     // If relogging while an old session exists, clear it and proceed with new credentials
     if (isAuthenticated()) {
         session_unset();
     }
 
+    unset($_SESSION['pending_admin_auth']);
+    $showAdminOtpForm = false;
+
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
-    $remember_me = isset($_POST['remember-me']);
+    // Remember me is currently disabled by business request.
+    // $remember_me = isset($_POST['remember-me']);
+    $remember_me = false;
 
     // Prepare data for API call
     $data = [
@@ -159,33 +303,32 @@ if ($_POST) {
         }
 
         if ($httpCode === 200 && $responseData && isset($responseData['success']) && $responseData['success']) {
-            // Store authentication data in session
-            $sessionRoleId = (int) ($responseData['data']['user']['role_id'] ?? 0);
-            if ($sessionRoleId <= 0 && isset($responseData['data']['user']['role'])) {
-                $sessionRoleId = (strtolower((string) $responseData['data']['user']['role']) === 'super admin' || strtolower((string) $responseData['data']['user']['role']) === 'admin') ? 1 : 2;
+            $payload = [
+                'user' => $responseData['data']['user'] ?? [],
+                'access_token' => $responseData['data']['access_token'] ?? null,
+                'refresh_token' => $responseData['data']['refresh_token'] ?? null
+            ];
+
+            $sessionRoleId = normalizeRoleIdFromUser($payload['user']);
+
+            if ($sessionRoleId === 1) {
+                try {
+                    sendAdminOtp($payload['user'], $pdo);
+                    $_SESSION['pending_admin_auth'] = $payload;
+                    $showAdminOtpForm = true;
+                    $otpNotice = 'OTP sent to your admin email. Enter it below to continue.';
+                } catch (Exception $otpError) {
+                    $error = $otpError->getMessage();
+                }
+            } else {
+                finalizeAuthenticatedSession($payload);
+
+                // Clear any output buffer before redirect
+                ob_end_clean();
+
+                // Redirect based on role_id (1 = Admin, all others = Employee)
+                redirectByRoleId($_SESSION['role_id'] ?? 1);
             }
-
-            $_SESSION['user_id'] = $responseData['data']['user']['id'] ?? null;
-            $_SESSION['role_id'] = $sessionRoleId > 0 ? $sessionRoleId : 1; // Store normalized role_id
-            $_SESSION['employee_id'] = $responseData['data']['user']['employee_id'] ?? null;
-            $_SESSION['is_new'] = $responseData['data']['user']['is_new'] ?? 0;
-            $_SESSION['auto_password_changed'] = $responseData['data']['user']['auto_password_changed'] ?? 0;
-            $_SESSION['requires_password_change'] = $responseData['data']['user']['requires_password_change'] ?? 0;
-            $_SESSION['username'] = $responseData['data']['user']['username'] ?? null;
-            $_SESSION['email'] = $responseData['data']['user']['email'] ?? null;
-            $_SESSION['employee_email'] = $responseData['data']['user']['employee_email'] ?? null;
-            $_SESSION['role'] = $responseData['data']['user']['role'] ?? null;
-            $_SESSION['first_name'] = $responseData['data']['user']['first_name'] ?? null;
-            $_SESSION['last_name'] = $responseData['data']['user']['last_name'] ?? null;
-            $_SESSION['access_token'] = $responseData['data']['access_token'] ?? null;
-            $_SESSION['refresh_token'] = $responseData['data']['refresh_token'] ?? null;
-            $_SESSION['authenticated'] = true;
-
-            // Clear any output buffer before redirect
-            ob_end_clean();
-
-            // Redirect based on role_id (1 = Admin, all others = Employee)
-            redirectByRoleId($_SESSION['role_id'] ?? 1);
         } else {
             // Handle various error scenarios
             if ($responseData && isset($responseData['message'])) {
@@ -249,6 +392,80 @@ if ($_POST) {
             </div>
 
             <!-- Login Form -->
+            <?php if (!empty($showAdminOtpForm)): ?>
+            <form class="mt-8 space-y-6" method="POST" action="">
+                <?php if (isset($error)): ?>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+
+                <?php if (isset($otpNotice)): ?>
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                    <?php echo htmlspecialchars($otpNotice); ?>
+                </div>
+                <?php endif; ?>
+
+                <div>
+                    <label for="admin_otp" class="block text-sm font-medium text-gray-700 mb-1">
+                        Admin OTP Verification
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-shield-alt text-gray-400"></i>
+                        </div>
+                        <input
+                            id="admin_otp"
+                            name="admin_otp"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="6"
+                            required
+                            class="appearance-none relative block w-full px-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                            placeholder="Enter 6-digit OTP"
+                        >
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                        type="submit"
+                        name="verify_admin_otp"
+                        value="1"
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                    >
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <i class="fas fa-check-circle text-blue-300 group-hover:text-blue-200"></i>
+                        </span>
+                        Verify OTP
+                    </button>
+
+                    <button
+                        type="submit"
+                        name="resend_admin_otp"
+                        value="1"
+                        formnovalidate
+                        class="group relative w-full flex justify-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                    >
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <i class="fas fa-paper-plane text-gray-400"></i>
+                        </span>
+                        Resend OTP
+                    </button>
+                </div>
+
+                <button
+                    type="submit"
+                    name="back_to_login"
+                    value="1"
+                    formnovalidate
+                    class="w-full flex justify-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                >
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Login
+                </button>
+            </form>
+            <?php else: ?>
             <form class="mt-8 space-y-6" method="POST" action="">
                 <?php if (isset($error)): ?>
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -297,6 +514,7 @@ if ($_POST) {
                     </div>
                 </div>
 
+                <!--
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         <input
@@ -316,6 +534,7 @@ if ($_POST) {
                         </a>
                     </div>
                 </div>
+                -->
 
                 <div>
                     <button
@@ -335,6 +554,7 @@ if ($_POST) {
                     </p>
                 </div>
             </form>
+            <?php endif; ?>
         </div>
     </div>
 
