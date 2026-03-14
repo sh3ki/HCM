@@ -526,10 +526,89 @@ function initializeGlobalSearch() {
     });
 }
 
+function initializeClickableCards() {
+    const cardSelector = '.bg-white.rounded-lg';
+    const cardRouteMap = [
+        { keywords: ['employee', 'headcount', 'staff'], href: 'employees.php' },
+        { keywords: ['payroll', 'gross pay', 'net pay', 'deduction', 'salary', 'payslip', 'overtime'], href: 'payroll.php' },
+        { keywords: ['compensation', 'allowance', 'bonus'], href: 'compensation.php' },
+        { keywords: ['benefit', 'philhealth', 'sss', 'pag-ibig', 'insurance'], href: 'benefits.php' },
+        { keywords: ['attendance', 'present', 'late', 'absent', 'clock'], href: 'attendance.php' },
+        { keywords: ['leave', 'vacation', 'sick'], href: 'leaves.php' },
+        { keywords: ['dependent', 'family'], href: 'dependents.php' },
+        { keywords: ['report', 'analytics', 'insight'], href: 'reports.php' },
+        { keywords: ['profile', 'account'], href: 'profile.php' },
+        { keywords: ['setting', 'preference', 'configuration'], href: 'settings.php' },
+        { keywords: ['tax'], href: 'employee_tax_deduction.php' },
+        { keywords: ['performance', 'kpi'], href: 'employee_performance.php' }
+    ];
+
+    const resolveCardHref = (card) => {
+        const explicitLink = (card.dataset.cardLink || '').trim();
+        if (explicitLink !== '') {
+            return explicitLink;
+        }
+
+        const text = (card.textContent || '').toLowerCase();
+        const matched = cardRouteMap.find((entry) => entry.keywords.some((keyword) => text.includes(keyword)));
+        return matched ? matched.href : '';
+    };
+
+    const isCardEligible = (card) => {
+        if (card.dataset.cardLink === 'none') {
+            return false;
+        }
+
+        if (card.closest('[id$="-modal"]') || card.closest('.fixed.inset-0')) {
+            return false;
+        }
+
+        if (card.hasAttribute('onclick') || card.querySelector('a[href], button, input, select, textarea, form, table')) {
+            return false;
+        }
+
+        return true;
+    };
+
+    const isInteractiveElement = (target) => {
+        return Boolean(target.closest('a, button, input, select, textarea, [role="button"], [role="link"]'));
+    };
+
+    document.querySelectorAll(cardSelector).forEach((card) => {
+        if (!isCardEligible(card)) {
+            return;
+        }
+
+        const href = resolveCardHref(card);
+        if (!href) {
+            return;
+        }
+
+        card.classList.add('cursor-pointer', 'hover:shadow-md', 'transition-shadow');
+        card.setAttribute('role', 'link');
+        card.tabIndex = 0;
+
+        card.addEventListener('click', (event) => {
+            if (isInteractiveElement(event.target)) {
+                return;
+            }
+            window.location.href = href;
+        });
+
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                window.location.href = href;
+            }
+        });
+    });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeDataTable();
     initializeGlobalSearch();
+    initializeClickableCards();
 });
 </script>
 
