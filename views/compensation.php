@@ -336,10 +336,12 @@ function applyFilters() {
                 title="Edit" onclick="editCompensation(${plan.id})">
             <i class="fas fa-edit"></i>
         </button>
+            <!--
         <button class="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg"
                 title="Delete" onclick="deleteCompensation(${plan.id})">
             <i class="fas fa-trash"></i>
         </button>
+            -->
     </td>
         `;
         tbody.appendChild(row);
