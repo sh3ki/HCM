@@ -165,7 +165,7 @@ function verifyOtp() {
     global $pdo;
     $userId = $_SESSION['user_id'] ?? null;
     $input = json_decode(file_get_contents('php://input'), true);
-    $otp = trim($input['otp'] ?? '');
+    $otp = preg_replace('/\D+/', '', (string) ($input['otp'] ?? ''));
 
     if (!$userId || !$otp) {
         http_response_code(400);
